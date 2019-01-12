@@ -31,7 +31,7 @@ func (suite *FIFOTestSuite) TestNoElementsAtInitialization() {
 }
 
 // ***************************************************************************************
-// ** Enqueue
+// ** Enqueue && GetLen
 // ***************************************************************************************
 
 // single enqueue (1 element, 1 goroutine)
@@ -85,7 +85,7 @@ func (suite *FIFOTestSuite) TestEnqueueLenMultipleGR() {
 
 	for i := 0; i < totalElements; i++ {
 		tmpVal, err = suite.fifo.Get(i)
-		suite.NoError(err, "No error should be returned trying to get an existent queue element")
+		suite.NoError(err, "No error should be returned trying to get an existent element")
 
 		val = tmpVal.(int)
 		if !sl2check[val] {
@@ -98,6 +98,30 @@ func (suite *FIFOTestSuite) TestEnqueueLenMultipleGR() {
 	suite.True(totalElementsVerified == totalGRs, "Enqueued elements are missing")
 }
 
+// call GetLen concurrently
+func (suite *FIFOTestSuite) TestGetLenMultipleGRs() {
+	var (
+		totalGRs               = 100
+		totalElementsToEnqueue = 10
+		wg                     sync.WaitGroup
+	)
+
+	for i := 0; i < totalElementsToEnqueue; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	for i := 0; i < totalGRs; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			total := suite.fifo.GetLen()
+			suite.Equalf(totalElementsToEnqueue, total, "Expected len: %v", totalElementsToEnqueue)
+		}()
+	}
+	wg.Wait()
+}
+
 // ***************************************************************************************
 // ** Get
 // ***************************************************************************************
@@ -108,7 +132,7 @@ func (suite *FIFOTestSuite) TestGetSingleGR() {
 	val, err := suite.fifo.Get(0)
 
 	// verify error (should be nil)
-	suite.NoError(err, "Unexpected error after ask for an existent element")
+	suite.NoError(err, "No error should be enqueueing an element")
 
 	// verify element's value
 	suite.Equalf(testValue, val, "Different element returned: %v", val)
@@ -124,6 +148,34 @@ func (suite *FIFOTestSuite) TestGetInvalidElementSingleGR() {
 
 	// verify element's value
 	suite.Equalf(val, nil, "Nil should be returner, currently returned: %v", val)
+}
+
+// call Get concurrently
+func (suite *FIFOTestSuite) TestGetMultipleGRs() {
+	var (
+		totalGRs               = 100
+		totalElementsToEnqueue = 10
+		wg                     sync.WaitGroup
+	)
+
+	for i := 0; i < totalElementsToEnqueue; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	for i := 0; i < totalGRs; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			val, err := suite.fifo.Get(5)
+
+			suite.NoError(err, "No error should be returned trying to get an existent element")
+			suite.Equal(5, val.(int), "Expected element's value: 5")
+		}()
+	}
+	wg.Wait()
+
+	total := suite.fifo.GetLen()
+	suite.Equalf(totalElementsToEnqueue, total, "Expected len: %v", totalElementsToEnqueue)
 }
 
 // ***************************************************************************************
