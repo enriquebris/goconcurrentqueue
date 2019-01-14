@@ -16,3 +16,9 @@ Visit [goconcurrentqueue at godoc.org](https://godoc.org/github.com/enriquebris/
 ## Qeueues
 
 - First In First Out (FIFO)
+
+## History
+
+### v0.1.0
+
+- First In First Out (FIFO) queue added
