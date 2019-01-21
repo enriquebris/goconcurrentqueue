@@ -1,5 +1,6 @@
 package goconcurrentqueue
 
+// Queue interface with basic && common queue functions
 type Queue interface {
 	// Enqueue element
 	Enqueue(interface{})
