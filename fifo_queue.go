@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// First In First Out (FIFO) concurrent queue
+// FIFO (First In First Out) concurrent queue
 type FIFO struct {
 	slice   []interface{}
 	rwmutex sync.RWMutex
