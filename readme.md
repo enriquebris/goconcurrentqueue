@@ -112,6 +112,10 @@ func main() {
 
 ## History
 
+### v0.2.0
+
+- Added Lock/Unlock/IsLocked methods to control operations locking
+
 ### v0.1.0
 
 - First In First Out (FIFO) queue added

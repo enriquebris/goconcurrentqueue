@@ -30,9 +30,22 @@ func (suite *FIFOTestSuite) TestNoElementsAtInitialization() {
 	suite.Equalf(0, len, "No elements expected at initialization, currently: %v", len)
 }
 
+// unlocked at initialization
+func (suite *FIFOTestSuite) TestNoLockedAtInitialization() {
+	suite.True(suite.fifo.IsLocked() == false, "Queue must be unlocked at initialization")
+}
+
 // ***************************************************************************************
 // ** Enqueue && GetLen
 // ***************************************************************************************
+
+// single enqueue lock verification
+func (suite *FIFOTestSuite) TestEnqueueLockSingleGR() {
+	suite.NoError(suite.fifo.Enqueue(1), "Unlocked queue allows to enqueue elements")
+
+	suite.fifo.Lock()
+	suite.Error(suite.fifo.Enqueue(1), "Locked queue does not allow to enqueue elements")
+}
 
 // single enqueue (1 element, 1 goroutine)
 func (suite *FIFOTestSuite) TestEnqueueLenSingleGR() {
@@ -126,6 +139,17 @@ func (suite *FIFOTestSuite) TestGetLenMultipleGRs() {
 // ** Get
 // ***************************************************************************************
 
+// single enqueue lock verification
+func (suite *FIFOTestSuite) TestGetLockSingleGR() {
+	suite.fifo.Enqueue(1)
+	_, err := suite.fifo.Get(0)
+	suite.NoError(err, "Unlocked queue allows to get elements")
+
+	suite.fifo.Lock()
+	_, err = suite.fifo.Get(0)
+	suite.Error(err, "Locked queue does not allow to get elements")
+}
+
 // get a valid element
 func (suite *FIFOTestSuite) TestGetSingleGR() {
 	suite.fifo.Enqueue(testValue)
@@ -181,6 +205,16 @@ func (suite *FIFOTestSuite) TestGetMultipleGRs() {
 // ***************************************************************************************
 // ** Remove
 // ***************************************************************************************
+
+// single remove lock verification
+func (suite *FIFOTestSuite) TestRemoveLockSingleGR() {
+	suite.fifo.Enqueue(1)
+	suite.NoError(suite.fifo.Remove(0), "Unlocked queue allows to remove elements")
+
+	suite.fifo.Enqueue(1)
+	suite.fifo.Lock()
+	suite.Error(suite.fifo.Remove(0), "Locked queue does not allow to remove elements")
+}
 
 // remove elements
 func (suite *FIFOTestSuite) TestRemoveSingleGR() {
@@ -242,6 +276,18 @@ func (suite *FIFOTestSuite) TestRemoveMultipleGRs() {
 // ***************************************************************************************
 // ** Dequeue
 // ***************************************************************************************
+
+// single dequeue lock verification
+func (suite *FIFOTestSuite) TestDequeueLockSingleGR() {
+	suite.fifo.Enqueue(1)
+	_, err := suite.fifo.Dequeue()
+	suite.NoError(err, "Unlocked queue allows to dequeue elements")
+
+	suite.fifo.Enqueue(1)
+	suite.fifo.Lock()
+	_, err = suite.fifo.Dequeue()
+	suite.Error(err, "Locked queue does not allow to dequeue elements")
+}
 
 // dequeue an empty queue
 func (suite *FIFOTestSuite) TestDequeueEmptyQueueSingleGR() {
@@ -307,6 +353,34 @@ func (suite *FIFOTestSuite) TestDequeueMultipleGRs() {
 	val, err := suite.fifo.Dequeue()
 	suite.NoError(err, "No error should be returned when getting an existent element")
 	suite.Equalf(totalElementsToDequeue, val, "The expected last element's value should be: %v", totalElementsToEnqueue-totalElementsToDequeue)
+}
+
+// ***************************************************************************************
+// ** Lock / Unlock / IsLocked
+// ***************************************************************************************
+
+// single lock
+func (suite *FIFOTestSuite) TestLockSingleGR() {
+	suite.fifo.Lock()
+	suite.True(suite.fifo.isLocked == true, "fifo.isLocked has to be true after fifo.Lock()")
+}
+
+// single unlock
+func (suite *FIFOTestSuite) TestUnlockSingleGR() {
+	suite.fifo.Lock()
+	suite.fifo.Unlock()
+	suite.True(suite.fifo.isLocked == false, "fifo.isLocked has to be false after fifo.Unlock()")
+}
+
+// single isLocked
+func (suite *FIFOTestSuite) TestIsLockedSingleGR() {
+	suite.True(suite.fifo.isLocked == suite.fifo.IsLocked(), "fifo.IsLocked() has to be equal to fifo.isLocked")
+
+	suite.fifo.Lock()
+	suite.True(suite.fifo.isLocked == suite.fifo.IsLocked(), "fifo.IsLocked() has to be equal to fifo.isLocked")
+
+	suite.fifo.Unlock()
+	suite.True(suite.fifo.isLocked == suite.fifo.IsLocked(), "fifo.IsLocked() has to be equal to fifo.isLocked")
 }
 
 // ***************************************************************************************
