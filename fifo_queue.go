@@ -3,12 +3,16 @@ package goconcurrentqueue
 import (
 	"fmt"
 	"sync"
+
+	"github.com/pkg/errors"
 )
 
 // FIFO (First In First Out) concurrent queue
 type FIFO struct {
-	slice   []interface{}
-	rwmutex sync.RWMutex
+	slice       []interface{}
+	rwmutex     sync.RWMutex
+	lockRWmutex sync.RWMutex
+	isLocked    bool
 }
 
 // NewFIFO returns a new FIFO concurrent queue
@@ -24,15 +28,24 @@ func (st *FIFO) initialize() {
 }
 
 // Enqueue enqueues an element
-func (st *FIFO) Enqueue(value interface{}) {
+func (st *FIFO) Enqueue(value interface{}) error {
+	if st.isLocked {
+		return errors.New("The queue is locked")
+	}
+
 	st.rwmutex.Lock()
 	defer st.rwmutex.Unlock()
 
 	st.slice = append(st.slice, value)
+	return nil
 }
 
 // Dequeue dequeues an element
 func (st *FIFO) Dequeue() (interface{}, error) {
+	if st.isLocked {
+		return nil, errors.New("The queue is locked")
+	}
+
 	st.rwmutex.Lock()
 	defer st.rwmutex.Unlock()
 
@@ -49,6 +62,10 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 
 // Get returns an element's value and keeps the element at the queue
 func (st *FIFO) Get(index int) (interface{}, error) {
+	if st.isLocked {
+		return nil, errors.New("The queue is locked")
+	}
+
 	st.rwmutex.RLock()
 	defer st.rwmutex.RUnlock()
 
@@ -61,6 +78,10 @@ func (st *FIFO) Get(index int) (interface{}, error) {
 
 // Remove removes an element from the queue
 func (st *FIFO) Remove(index int) error {
+	if st.isLocked {
+		return errors.New("The queue is locked")
+	}
+
 	st.rwmutex.Lock()
 	defer st.rwmutex.Unlock()
 
@@ -80,4 +101,28 @@ func (st *FIFO) GetLen() int {
 	defer st.rwmutex.RUnlock()
 
 	return len(st.slice)
+}
+
+// Lock // Locks the queue. No enqueue/dequeue operations will be allowed after this point.
+func (st *FIFO) Lock() {
+	st.lockRWmutex.Lock()
+	defer st.lockRWmutex.Unlock()
+
+	st.isLocked = true
+}
+
+// Unlock unlocks the queue
+func (st *FIFO) Unlock() {
+	st.lockRWmutex.Lock()
+	defer st.lockRWmutex.Unlock()
+
+	st.isLocked = false
+}
+
+// IsLocked returns true whether the queue is locked
+func (st *FIFO) IsLocked() bool {
+	st.lockRWmutex.RLock()
+	defer st.lockRWmutex.RUnlock()
+
+	return st.isLocked
 }
