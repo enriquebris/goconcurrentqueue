@@ -11,7 +11,7 @@ go get github.com/enriquebris/goconcurrentqueue
 ```
 
 ## Documentation
-Visit [goconcurrentqueue at godoc.org](https://godoc.org/github.com/enriquebris/goworkerpool)
+Visit [goconcurrentqueue at godoc.org](https://godoc.org/github.com/enriquebris/goconcurrentqueue)
 
 ## Qeueues
 
