@@ -109,3 +109,43 @@ func BenchmarkFIFODequeue1000SingleGR(b *testing.B) {
 		}
 	}
 }
+
+// multiple goroutines - dequeue 100 elements per gr
+func BenchmarkFIFODequeue100MultipleGRs(b *testing.B) {
+	b.StopTimer()
+	fifo := NewFIFO()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			b.StopTimer()
+			for c := 0; c < 100; c++ {
+				fifo.Enqueue(c)
+			}
+
+			b.StartTimer()
+			for c := 0; c < 100; c++ {
+				fifo.Dequeue()
+			}
+		}
+	})
+}
+
+// multiple goroutines - dequeue 1000 elements per gr
+func BenchmarkFIFODequeue1000MultipleGRs(b *testing.B) {
+	b.StopTimer()
+	fifo := NewFIFO()
+
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			b.StopTimer()
+			for c := 0; c < 1000; c++ {
+				fifo.Enqueue(c)
+			}
+
+			b.StartTimer()
+			for c := 0; c < 1000; c++ {
+				fifo.Dequeue()
+			}
+		}
+	})
+}

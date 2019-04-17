@@ -386,6 +386,6 @@ func (suite *FIFOTestSuite) TestIsLockedSingleGR() {
 // ** Run suite
 // ***************************************************************************************
 
-func TestRunSuite(t *testing.T) {
+func TestFIFOTestSuite(t *testing.T) {
 	suite.Run(t, new(FIFOTestSuite))
 }
