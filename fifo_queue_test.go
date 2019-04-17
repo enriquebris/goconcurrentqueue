@@ -79,7 +79,6 @@ func (suite *FIFOTestSuite) TestEnqueueLenMultipleGR() {
 			suite.fifo.Enqueue(value)
 		}(i)
 	}
-
 	wg.Wait()
 
 	// check that there are totalGRs elements enqueued
