@@ -19,7 +19,7 @@ func NewFixedFIFO(capacity int) *FixedFIFO {
 
 func (st *FixedFIFO) initialize(capacity int) {
 	st.queue = make(chan interface{}, capacity)
-	st.lockChan = make(chan struct{})
+	st.lockChan = make(chan struct{}, 1)
 }
 
 func (st *FixedFIFO) Enqueue(value interface{}) error {
@@ -55,6 +55,14 @@ func (st *FixedFIFO) GetLen() int {
 	return len(st.queue)
 }
 
+func (st *FixedFIFO) Get(int) (interface{}, error) {
+	return nil, newNotImplementedError()
+}
+
+func (st *FixedFIFO) Remove(index int) error {
+	return newNotImplementedError()
+}
+
 func (st *FixedFIFO) Lock() {
 	// non-blocking fill the channel
 	select {
@@ -72,5 +80,5 @@ func (st *FixedFIFO) Unlock() {
 }
 
 func (st *FixedFIFO) IsLocked() bool {
-	return len(st.lockChan) == 1
+	return len(st.lockChan) >= 1
 }

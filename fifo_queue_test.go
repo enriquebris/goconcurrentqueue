@@ -138,7 +138,7 @@ func (suite *FIFOTestSuite) TestGetLenMultipleGRs() {
 // ** Get
 // ***************************************************************************************
 
-// single enqueue lock verification
+// get an element
 func (suite *FIFOTestSuite) TestGetLockSingleGR() {
 	suite.fifo.Enqueue(1)
 	_, err := suite.fifo.Get(0)
@@ -350,7 +350,7 @@ func (suite *FIFOTestSuite) TestDequeueMultipleGRs() {
 
 	// check current first element
 	val, err := suite.fifo.Dequeue()
-	suite.NoError(err, "No error should be returned when getting an existent element")
+	suite.NoError(err, "No error should be returned when dequeuing an existent element")
 	suite.Equalf(totalElementsToDequeue, val, "The expected last element's value should be: %v", totalElementsToEnqueue-totalElementsToDequeue)
 }
 

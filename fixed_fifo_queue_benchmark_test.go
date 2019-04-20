@@ -17,7 +17,7 @@ func BenchmarkFixedFIFOEnqueueSingleGR(b *testing.B) {
 }
 
 // single goroutine - enqueue 100 elements
-func BenchmarkFixedDIDOEnqueue100SingleGR(b *testing.B) {
+func BenchmarkFixedFIFOEnqueue100SingleGR(b *testing.B) {
 	fifo := NewFixedFIFO(100)
 
 	for i := 0; i < b.N; i++ {

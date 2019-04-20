@@ -21,7 +21,7 @@ func (suite *FixedFIFOTestSuite) SetupTest() {
 // ***************************************************************************************
 
 func TestFixedFIFOTestSuite(t *testing.T) {
-	suite.Run(t, new(FIFOTestSuite))
+	suite.Run(t, new(FixedFIFOTestSuite))
 }
 
 // ***************************************************************************************
@@ -45,6 +45,18 @@ func (suite *FixedFIFOTestSuite) TestEnqueueLenSingleGR() {
 	suite.fifo.Enqueue(5)
 	len = suite.fifo.GetLen()
 	suite.Equalf(2, len, "Expected number of elements in queue: 2, currently: %v", len)
+}
+
+// single enqueue at full capacity, 1 goroutine
+func (suite *FixedFIFOTestSuite) TestEnqueueFullCapacitySingleGR() {
+	total := 5
+	suite.fifo = NewFixedFIFO(total)
+
+	for i := 0; i < total; i++ {
+		suite.NoError(suite.fifo.Enqueue(i), "no error expected when queue is not full")
+	}
+
+	suite.Error(suite.fifo.Enqueue(0), "error expected when queue is full")
 }
 
 // TestEnqueueLenMultipleGR enqueues elements concurrently
@@ -121,4 +133,157 @@ func (suite *FixedFIFOTestSuite) TestGetLenMultipleGRs() {
 		}()
 	}
 	wg.Wait()
+}
+
+// ***************************************************************************************
+// ** Get
+// ***************************************************************************************
+
+// calling Get
+func (suite *FixedFIFOTestSuite) TestGetLockSingleGR() {
+	val, err := suite.fifo.Get(1)
+
+	suite.Error(err, "error expected")
+	_, ok := err.(NotImplementedError)
+	suite.True(ok, "expected error custom type: NotImplementedError")
+
+	suite.Nil(val, "not expected any value other than nil")
+}
+
+// ***************************************************************************************
+// ** Remove
+// ***************************************************************************************
+
+// calling Remove
+func (suite *FixedFIFOTestSuite) TestRemoveLockSingleGR() {
+	err := suite.fifo.Remove(1)
+
+	suite.Error(err, "error expected")
+	_, ok := err.(NotImplementedError)
+	suite.True(ok, "expected error custom type: NotImplementedError")
+}
+
+// ***************************************************************************************
+// ** Dequeue
+// ***************************************************************************************
+
+// single dequeue lock verification
+func (suite *FixedFIFOTestSuite) TestDequeueLockSingleGR() {
+	suite.fifo.Enqueue(1)
+	_, err := suite.fifo.Dequeue()
+	suite.NoError(err, "Unlocked queue allows to dequeue elements")
+
+	suite.fifo.Enqueue(1)
+	suite.fifo.Lock()
+	_, err = suite.fifo.Dequeue()
+	suite.Error(err, "Locked queue does not allow to dequeue elements")
+}
+
+// dequeue an empty queue
+func (suite *FixedFIFOTestSuite) TestDequeueEmptyQueueSingleGR() {
+	val, err := suite.fifo.Dequeue()
+	suite.Errorf(err, "Can't dequeue an empty queue")
+	suite.Equal(nil, val, "Can't get a value different than nil from an empty queue")
+}
+
+// dequeue all elements
+func (suite *FixedFIFOTestSuite) TestDequeueSingleGR() {
+	suite.fifo.Enqueue(testValue)
+	suite.fifo.Enqueue(5)
+
+	// dequeue the first element
+	val, err := suite.fifo.Dequeue()
+	suite.NoError(err, "Unexpected error")
+	suite.Equal(testValue, val, "Wrong element's value")
+	len := suite.fifo.GetLen()
+	suite.Equal(1, len, "Incorrect number of queue elements")
+
+	// get the second element
+	val, err = suite.fifo.Dequeue()
+	suite.NoError(err, "Unexpected error")
+	suite.Equal(5, val, "Wrong element's value")
+	len = suite.fifo.GetLen()
+	suite.Equal(0, len, "Incorrect number of queue elements")
+
+}
+
+// dequeue an item after closing the empty queue's channel
+func (suite *FixedFIFOTestSuite) TestDequeueClosedChannelSingleGR() {
+	// enqueue a dummy item
+	suite.fifo.Enqueue(1)
+	// close the internal queue's channel
+	close(suite.fifo.queue)
+	// dequeue the dummy item
+	suite.fifo.Dequeue()
+
+	// dequeue after the queue's channel was closed
+	val, err := suite.fifo.Dequeue()
+	suite.Error(err, "error expected after internal queue channel was closed")
+	suite.Nil(val, "nil value expected after internal channel was closed")
+}
+
+// TestDequeueMultipleGRs dequeues elements concurrently
+//
+// Detailed steps:
+//	1 - Enqueues totalElementsToEnqueue consecutive integers
+//	2 - Dequeues totalElementsToDequeue concurrently from totalElementsToDequeue GRs
+//	3 - Verifies the final len, should be equal to totalElementsToEnqueue - totalElementsToDequeue
+//	4 - Verifies that the next dequeued element's value is equal to totalElementsToDequeue
+func (suite *FixedFIFOTestSuite) TestDequeueMultipleGRs() {
+	var (
+		wg                     sync.WaitGroup
+		totalElementsToEnqueue = 100
+		totalElementsToDequeue = 90
+	)
+
+	for i := 0; i < totalElementsToEnqueue; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	for i := 0; i < totalElementsToDequeue; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := suite.fifo.Dequeue()
+			suite.NoError(err, "Unexpected error during concurrent Dequeue()")
+		}()
+	}
+	wg.Wait()
+
+	// check len, should be == totalElementsToEnqueue - totalElementsToDequeue
+	totalElementsAfterDequeue := suite.fifo.GetLen()
+	suite.Equal(totalElementsToEnqueue-totalElementsToDequeue, totalElementsAfterDequeue, "Total elements on queue (after Dequeue) does not match with expected number")
+
+	// check current first element
+	val, err := suite.fifo.Dequeue()
+	suite.NoError(err, "No error should be returned when dequeuing an existent element")
+	suite.Equalf(totalElementsToDequeue, val, "The expected last element's value should be: %v", totalElementsToEnqueue-totalElementsToDequeue)
+}
+
+// ***************************************************************************************
+// ** Lock / Unlock / IsLocked
+// ***************************************************************************************
+
+// single lock
+func (suite *FixedFIFOTestSuite) TestLockSingleGR() {
+	suite.fifo.Lock()
+	suite.True(suite.fifo.IsLocked(), "fifo.isLocked has to be true after fifo.Lock()")
+}
+
+func (suite *FixedFIFOTestSuite) TestMultipleLockSingleGR() {
+	for i := 0; i < 5; i++ {
+		suite.fifo.Lock()
+	}
+
+	suite.True(suite.fifo.IsLocked(), "queue must be locked after Lock() operations")
+}
+
+// single unlock
+func (suite *FixedFIFOTestSuite) TestUnlockSingleGR() {
+	suite.fifo.Lock()
+	suite.fifo.Unlock()
+	suite.True(suite.fifo.IsLocked() == false, "fifo.isLocked has to be false after fifo.Unlock()")
+
+	suite.fifo.Unlock()
+	suite.True(suite.fifo.IsLocked() == false, "fifo.isLocked has to be false after fifo.Unlock()")
 }
