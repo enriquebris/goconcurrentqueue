@@ -5,6 +5,7 @@ import (
 	"fmt"
 )
 
+// Fixed capacity FIFO (First In First Out) concurrent queue
 type FixedFIFO struct {
 	queue    chan interface{}
 	lockChan chan struct{}
@@ -51,16 +52,20 @@ func (st *FixedFIFO) Dequeue() (interface{}, error) {
 	}
 }
 
+// GetLen returns queue's length (total enqueued elements)
 func (st *FixedFIFO) GetLen() int {
+	st.Lock()
+	defer st.Unlock()
+
 	return len(st.queue)
 }
 
-func (st *FixedFIFO) Get(int) (interface{}, error) {
-	return nil, newNotImplementedError()
-}
+// GetCap returns the queue's capacity
+func (st *FixedFIFO) GetCap() int {
+	st.Lock()
+	defer st.Unlock()
 
-func (st *FixedFIFO) Remove(index int) error {
-	return newNotImplementedError()
+	return cap(st.queue)
 }
 
 func (st *FixedFIFO) Lock() {

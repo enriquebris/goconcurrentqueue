@@ -7,13 +7,17 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const (
+	fixedFIFOQueueCapacity = 500
+)
+
 type FixedFIFOTestSuite struct {
 	suite.Suite
 	fifo *FixedFIFO
 }
 
 func (suite *FixedFIFOTestSuite) SetupTest() {
-	suite.fifo = NewFixedFIFO(500)
+	suite.fifo = NewFixedFIFO(fixedFIFOQueueCapacity)
 }
 
 // ***************************************************************************************
@@ -136,31 +140,17 @@ func (suite *FixedFIFOTestSuite) TestGetLenMultipleGRs() {
 }
 
 // ***************************************************************************************
-// ** Get
+// ** GetCap
 // ***************************************************************************************
 
-// calling Get
-func (suite *FixedFIFOTestSuite) TestGetLockSingleGR() {
-	val, err := suite.fifo.Get(1)
+// single GR getCapacity
+func (suite *FixedFIFOTestSuite) TestGetCapSingleGR() {
+	// initial capacity
+	suite.Equal(fixedFIFOQueueCapacity, suite.fifo.GetCap(), "unexpected capacity")
 
-	suite.Error(err, "error expected")
-	_, ok := err.(NotImplementedError)
-	suite.True(ok, "expected error custom type: NotImplementedError")
-
-	suite.Nil(val, "not expected any value other than nil")
-}
-
-// ***************************************************************************************
-// ** Remove
-// ***************************************************************************************
-
-// calling Remove
-func (suite *FixedFIFOTestSuite) TestRemoveLockSingleGR() {
-	err := suite.fifo.Remove(1)
-
-	suite.Error(err, "error expected")
-	_, ok := err.(NotImplementedError)
-	suite.True(ok, "expected error custom type: NotImplementedError")
+	// new fifo with capacity == 10
+	suite.fifo = NewFixedFIFO(10)
+	suite.Equal(10, suite.fifo.GetCap(), "unexpected capacity")
 }
 
 // ***************************************************************************************
