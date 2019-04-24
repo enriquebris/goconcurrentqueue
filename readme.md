@@ -3,6 +3,16 @@
 # goconcurrentqueue - Concurrent queues
 Concurrent-safe queue. Multiple goroutines (GR) could access the queue simultaneously without adding a race condition.
 
+## Topics
+ - [Installation](#installation)
+ - [Documentation](#documentation)
+ - [Queues](#queues)
+    - [FIFO](#fifo)
+    - [FixedFIFO](#fixedfifo)
+    - [Benchmarks](#benchmarks-fixedfifo-vs-fifo)
+ - [Get started](#get-started)
+ - [History](#history)
+
 ## Installation
 
 Execute
@@ -10,10 +20,18 @@ Execute
 go get github.com/enriquebris/goconcurrentqueue
 ```
 
+This package is compatible with the following golang versions:
+ - 1.7.x
+ - 1.8.x
+ - 1.9.x
+ - 1.10.x
+ - 1.11.x
+ - 1.12.x
+
 ## Documentation
 Visit [goconcurrentqueue at godoc.org](https://godoc.org/github.com/enriquebris/goconcurrentqueue)
 
-## Qeueues
+## Queues
 
 - First In First Out (FIFO)
     - [FIFO](#fifo)
@@ -41,6 +59,8 @@ FixedFIFO is, at least, 2x faster than [FIFO](#fifo) in concurrent scenarios (mu
 It has a fixed capacity meaning that no more items than this capacity could coexist at the same time. 
 
 ## Benchmarks FixedFIFO vs FIFO
+
+The numbers for the following charts were obtained by running the benchmarks in a 2012 MacBook Pro (2.3 GHz Intel Core i7 - 16 GB 1600 MHz DDR3) with golang v1.12 
 
 ### Enqueue
 
