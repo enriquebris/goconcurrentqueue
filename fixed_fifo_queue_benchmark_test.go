@@ -27,6 +27,17 @@ func BenchmarkFixedFIFOEnqueue100SingleGR(b *testing.B) {
 	}
 }
 
+// single goroutine - enqueue 1000 elements
+func BenchmarkFixedFIFOEnqueue1000SingleGR(b *testing.B) {
+	fifo := NewFixedFIFO(1000)
+
+	for i := 0; i < b.N; i++ {
+		for c := 0; c < 1000; c++ {
+			fifo.Enqueue(c)
+		}
+	}
+}
+
 // multiple goroutines - enqueue 100 elements per gr
 func BenchmarkFixedFIFOEnqueue100MultipleGRs(b *testing.B) {
 	b.StopTimer()
