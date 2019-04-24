@@ -1,4 +1,4 @@
-[![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.2.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.2.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
+[![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.3.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.3.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
 
 # goconcurrentqueue - Concurrent queues
 Concurrent safe queue. Access the queue(s) from multiple goroutines at the same time.
@@ -16,6 +16,39 @@ Visit [goconcurrentqueue at godoc.org](https://godoc.org/github.com/enriquebris/
 ## Qeueues
 
 - First In First Out (FIFO)
+    - [FIFO](#fifo)
+    - [FixedFIFO](#fixedfifo)
+    - [Benchmarks FixedFIFO vs FIFO](#benchmarks-fixedfifo-vs-fifo)
+
+### FIFO
+
+**FIFO**: concurrent-safe auto expandable queue.
+
+#### pros
+Client is able to enqueue as many items as needed.
+
+#### cons
+It is slightly slower than FixedFIFO.
+
+### FixedFIFO
+
+**FixedFIFO**: concurrent-safe fixed capacity queue.
+
+#### pros
+FixedFIFO is, at least, 2x faster than [FIFO](#fifo).
+
+#### cons
+It has a fixed capacity meaning that no more items than this capacity could coexist at the same time. 
+
+## Benchmarks FixedFIFO vs FIFO
+
+### Enqueue
+
+![concurrent-safe FixedFIFO vs FIFO . operation: enqueue](web/FixedFIFO-vs-FIFO-enqueue.png "concurrent-safe FixedFIFO vs FIFO . operation: enqueue")
+
+### Dequeue
+
+![concurrent-safe FixedFIFO vs FIFO . operation: dequeue](web/FixedFIFO-vs-FIFO-dequeue.png "concurrent-safe FixedFIFO vs FIFO . operation: dequeue")
 
 ## Get started
 
@@ -111,6 +144,13 @@ func main() {
 ```
 
 ## History
+
+### v0.3.0
+
+- Added FixedFIFO queue's implementation (at least 2x faster than FIFO for multiple GRs)
+- Added benchmarks for both FIFO / FixedFIFO
+- Added GetCap() to Queue interface
+- Removed Get() and Remove() methods from Queue interface
 
 ### v0.2.0
 
