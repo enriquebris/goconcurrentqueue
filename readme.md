@@ -1,7 +1,7 @@
 [![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.3.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.3.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
 
 # goconcurrentqueue - Concurrent queues
-Concurrent safe queue. Access the queue(s) from multiple goroutines at the same time.
+Concurrent-safe queue. Multiple goroutines (GR) could access the queue simultaneously without adding a race condition.
 
 ## Installation
 
@@ -35,7 +35,7 @@ It is slightly slower than FixedFIFO.
 **FixedFIFO**: concurrent-safe fixed capacity queue.
 
 #### pros
-FixedFIFO is, at least, 2x faster than [FIFO](#fifo).
+FixedFIFO is, at least, 2x faster than [FIFO](#fifo) in concurrent scenarios (multiple GR accessing the queue simultaneously).
 
 #### cons
 It has a fixed capacity meaning that no more items than this capacity could coexist at the same time. 
