@@ -1,7 +1,8 @@
 [![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.3.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.3.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
 
-# goconcurrentqueue - Concurrent queues
-Concurrent-safe queue. Multiple goroutines (GR) could access the queue simultaneously without adding a race condition.
+# goconcurrentqueue - Concurrent safe queues
+The package goconcurrentqueue offers a public interface Queue with the most common methods for a [queue](https://en.wikipedia.org/wiki/Queue_(abstract_data_type)).
+It comes with multiple Queue's concurrent-safe implementations, meaning they could be used concurrently by multiple goroutines without adding race conditions.
 
 ## Topics
  - [Installation](#installation)
@@ -43,20 +44,23 @@ Visit [goconcurrentqueue at godoc.org](https://godoc.org/github.com/enriquebris/
 **FIFO**: concurrent-safe auto expandable queue.
 
 #### pros
-Client is able to enqueue as many items as needed.
+ - It is possible to enqueue as many items as needed.
+ - Extra methods to get and remove enqueued items:
+     - [Get](https://godoc.org/github.com/enriquebris/goconcurrentqueue#FIFO.Get): returns an element's value and keeps the element at the queue
+     - [Remove](https://godoc.org/github.com/enriquebris/goconcurrentqueue#FIFO.Get): removes an element (using a given position) from the queue
 
 #### cons
-It is slightly slower than FixedFIFO.
+ - It is slightly slower than FixedFIFO.
 
 ### FixedFIFO
 
 **FixedFIFO**: concurrent-safe fixed capacity queue.
 
 #### pros
-FixedFIFO is, at least, 2x faster than [FIFO](#fifo) in concurrent scenarios (multiple GR accessing the queue simultaneously).
+ - FixedFIFO is, at least, 2x faster than [FIFO](#fifo) in concurrent scenarios (multiple GR accessing the queue simultaneously).
 
 #### cons
-It has a fixed capacity meaning that no more items than this capacity could coexist at the same time. 
+ - It has a fixed capacity meaning that no more items than this capacity could coexist at the same time. 
 
 ## Benchmarks FixedFIFO vs FIFO
 
@@ -72,7 +76,7 @@ The numbers for the following charts were obtained by running the benchmarks in 
 
 ## Get started
 
-### Fifo queue simple usage
+### FIFO queue simple usage
 
 ```go
 package main
@@ -89,77 +93,71 @@ type AnyStruct struct {
 }
 
 func main() {
-	fifoQueue := goconcurrentqueue.NewFIFO()
+	queue := goconcurrentqueue.NewFIFO()
 
-	// enqueue two elements (different types)
-	fifoQueue.Enqueue(AnyStruct{"one", 1})
-	fifoQueue.Enqueue("Paris")
+	queue.Enqueue("any string value")
+	queue.Enqueue(5)
+	queue.Enqueue(AnyStruct{Field1: "hello world", Field2: 15})
 
-	// dequeue the first element
-	item, _ := fifoQueue.Dequeue()
+	// will output: 3
+	fmt.Printf("queue's length: %v\n", queue.GetLen())
 
-	fmt.Println(item)
+	item, err := queue.Dequeue()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	// will output "any string value"
+	fmt.Printf("dequeued item: %v\n", item)
+
+	// will output: 2
+	fmt.Printf("queue's length: %v\n", queue.GetLen())
+
 }
 ```
 
-### FIFO queue detailed example
+### Dependency Inversion Principle using concurrent-safe queues
+
+*High level modules should not depend on low level modules. Both should depend on abstractions.* Robert C. Martin
 
 ```go
 package main
 
 import (
 	"fmt"
+
 	"github.com/enriquebris/goconcurrentqueue"
 )
 
 func main() {
-	// instantiate the FIFO queue
-	fifoQueue := goconcurrentqueue.NewFIFO()
+	var (
+		queue          goconcurrentqueue.Queue
+		dummyCondition = true
+	)
 
-	totalElementsToEnqueue := 100
-
-	// print total enqueued elements
-	fmt.Printf("Total enqueued elements at queue instantiation: %v\n", fifoQueue.GetLen())
-
-	fmt.Printf("\n(step 1) - Enqueue %v elements\n", totalElementsToEnqueue)
-	// enqueue n elements ( n ==> totalElementsToEnqueue )
-	for i := 1; i <= totalElementsToEnqueue; i++ {
-		fifoQueue.Enqueue(i)
-	}
-	// print total enqueued elements
-	fmt.Printf("Total enqueued elements: %v\n", fifoQueue.GetLen())
-
-	// dequeue a element
-	fmt.Println("\n(step 2) - Dequeue 1 element")
-	element, err := fifoQueue.Dequeue()
-	if err != nil {
-		fmt.Println(err)
+	// decides which Queue's implementation is the best option for this scenario
+	if dummyCondition {
+		queue = goconcurrentqueue.NewFIFO()
 	} else {
-		fmt.Printf("Dequeued element's value: %v\n", element)
-	}
-	// print total enqueued elements
-	fmt.Printf("Total enqueued elements: %v\n", fifoQueue.GetLen())
-
-	// get the value of the first element, the next to be dequeued
-	fmt.Println("\n(step 3) - Get element at index 0 (not dequeue)")
-	element, err = fifoQueue.Get(0)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Printf("Element at first position (0): %v\n", element)
-	}
-	// print total enqueued elements
-	fmt.Printf("Total enqueued elements: %v\n", fifoQueue.GetLen())
-
-	// remove an arbitrary element (based on the index)
-	fmt.Println("\n(step 4) - Remove element at index 1")
-	err = fifoQueue.Remove(1)
-	if err != nil {
-		fmt.Printf("Error at queue.Remove(...): '%v'\n", err.Error())
+		queue = goconcurrentqueue.NewFixedFIFO(10)
 	}
 
-	// print total enqueued elements
-	fmt.Printf("Total enqueued elements: %v\n", fifoQueue.GetLen())
+	fmt.Printf("queue's length: %v\n", queue.GetLen())
+	workWithQueue(queue)
+	fmt.Printf("queue's length: %v\n", queue.GetLen())
+}
+
+// workWithQueue uses a goconcurrentqueue.Queue to perform the work
+func workWithQueue(queue goconcurrentqueue.Queue) error {
+	// do some work
+
+	// enqueue an item
+	if err := queue.Enqueue("test value"); err != nil {
+		return err
+	}
+
+	return nil
 }
 ```
 
