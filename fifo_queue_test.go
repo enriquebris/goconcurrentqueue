@@ -79,7 +79,6 @@ func (suite *FIFOTestSuite) TestEnqueueLenMultipleGR() {
 			suite.fifo.Enqueue(value)
 		}(i)
 	}
-
 	wg.Wait()
 
 	// check that there are totalGRs elements enqueued
@@ -136,10 +135,25 @@ func (suite *FIFOTestSuite) TestGetLenMultipleGRs() {
 }
 
 // ***************************************************************************************
+// ** GetCap
+// ***************************************************************************************
+
+// single GR getCapacity
+func (suite *FIFOTestSuite) TestGetCapSingleGR() {
+	// initial capacity
+	suite.Equal(cap(suite.fifo.slice), suite.fifo.GetCap(), "unexpected capacity")
+
+	// checking after adding 2 items
+	suite.fifo.Enqueue(1)
+	suite.fifo.Enqueue(2)
+	suite.Equal(cap(suite.fifo.slice), suite.fifo.GetCap(), "unexpected capacity")
+}
+
+// ***************************************************************************************
 // ** Get
 // ***************************************************************************************
 
-// single enqueue lock verification
+// get an element
 func (suite *FIFOTestSuite) TestGetLockSingleGR() {
 	suite.fifo.Enqueue(1)
 	_, err := suite.fifo.Get(0)
@@ -351,7 +365,7 @@ func (suite *FIFOTestSuite) TestDequeueMultipleGRs() {
 
 	// check current first element
 	val, err := suite.fifo.Dequeue()
-	suite.NoError(err, "No error should be returned when getting an existent element")
+	suite.NoError(err, "No error should be returned when dequeuing an existent element")
 	suite.Equalf(totalElementsToDequeue, val, "The expected last element's value should be: %v", totalElementsToEnqueue-totalElementsToDequeue)
 }
 
@@ -387,6 +401,6 @@ func (suite *FIFOTestSuite) TestIsLockedSingleGR() {
 // ** Run suite
 // ***************************************************************************************
 
-func TestRunSuite(t *testing.T) {
+func TestFIFOTestSuite(t *testing.T) {
 	suite.Run(t, new(FIFOTestSuite))
 }

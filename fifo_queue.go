@@ -103,6 +103,14 @@ func (st *FIFO) GetLen() int {
 	return len(st.slice)
 }
 
+// GetCap returns the queue's capacity
+func (st *FIFO) GetCap() int {
+	st.rwmutex.RLock()
+	defer st.rwmutex.RUnlock()
+
+	return cap(st.slice)
+}
+
 // Lock // Locks the queue. No enqueue/dequeue operations will be allowed after this point.
 func (st *FIFO) Lock() {
 	st.lockRWmutex.Lock()

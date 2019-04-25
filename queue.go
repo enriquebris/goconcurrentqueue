@@ -8,10 +8,8 @@ type Queue interface {
 	Dequeue() (interface{}, error)
 	// Get number of enqueued elements
 	GetLen() int
-	// Get an element's value and keep it at the queue
-	Get(int) (interface{}, error)
-	// Remove any element from the queue
-	Remove(index int) error
+	// Get queue's capacity
+	GetCap() int
 
 	// Lock the queue. No enqueue/dequeue/remove/get operations will be allowed after this point.
 	Lock()
