@@ -3,8 +3,6 @@ package goconcurrentqueue
 import (
 	"fmt"
 	"sync"
-
-	"github.com/pkg/errors"
 )
 
 // FIFO (First In First Out) concurrent queue
@@ -30,7 +28,7 @@ func (st *FIFO) initialize() {
 // Enqueue enqueues an element
 func (st *FIFO) Enqueue(value interface{}) error {
 	if st.isLocked {
-		return errors.New("The queue is locked")
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
 	st.rwmutex.Lock()
@@ -43,7 +41,7 @@ func (st *FIFO) Enqueue(value interface{}) error {
 // Dequeue dequeues an element
 func (st *FIFO) Dequeue() (interface{}, error) {
 	if st.isLocked {
-		return nil, errors.New("The queue is locked")
+		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
 	st.rwmutex.Lock()
@@ -51,7 +49,7 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 
 	len := len(st.slice)
 	if len == 0 {
-		return nil, fmt.Errorf("queue is empty")
+		return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue")
 	}
 
 	elementToReturn := st.slice[0]
@@ -63,14 +61,14 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 // Get returns an element's value and keeps the element at the queue
 func (st *FIFO) Get(index int) (interface{}, error) {
 	if st.isLocked {
-		return nil, errors.New("The queue is locked")
+		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
 	st.rwmutex.RLock()
 	defer st.rwmutex.RUnlock()
 
 	if len(st.slice) <= index {
-		return nil, fmt.Errorf("index out of bounds: %v", index)
+		return nil, NewQueueError(QueueErrorCodeIndexOutOfBounds, fmt.Sprintf("index out of bounds: %v", index))
 	}
 
 	return st.slice[index], nil
@@ -79,14 +77,14 @@ func (st *FIFO) Get(index int) (interface{}, error) {
 // Remove removes an element from the queue
 func (st *FIFO) Remove(index int) error {
 	if st.isLocked {
-		return errors.New("The queue is locked")
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
 	st.rwmutex.Lock()
 	defer st.rwmutex.Unlock()
 
 	if len(st.slice) <= index {
-		return fmt.Errorf("index out of bounds: %v", index)
+		return NewQueueError(QueueErrorCodeIndexOutOfBounds, fmt.Sprintf("index out of bounds: %v", index))
 	}
 
 	// remove the element

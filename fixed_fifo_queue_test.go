@@ -37,7 +37,14 @@ func (suite *FixedFIFOTestSuite) TestEnqueueLockSingleGR() {
 	suite.NoError(suite.fifo.Enqueue(1), "Unlocked queue allows to enqueue elements")
 
 	suite.fifo.Lock()
-	suite.Error(suite.fifo.Enqueue(1), "Locked queue does not allow to enqueue elements")
+	err := suite.fifo.Enqueue(1)
+	suite.Error(err, "Locked queue does not allow to enqueue elements")
+
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeLockedQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeLockedQueue)
 }
 
 // single enqueue (1 element, 1 goroutine)
@@ -60,7 +67,13 @@ func (suite *FixedFIFOTestSuite) TestEnqueueFullCapacitySingleGR() {
 		suite.NoError(suite.fifo.Enqueue(i), "no error expected when queue is not full")
 	}
 
-	suite.Error(suite.fifo.Enqueue(0), "error expected when queue is full")
+	err := suite.fifo.Enqueue(0)
+	suite.Error(err, "error expected when queue is full")
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeFullCapacity, customError.Code(), "Expected code: '%v'", QueueErrorCodeFullCapacity)
 }
 
 // TestEnqueueLenMultipleGR enqueues elements concurrently
@@ -167,12 +180,28 @@ func (suite *FixedFIFOTestSuite) TestDequeueLockSingleGR() {
 	suite.fifo.Lock()
 	_, err = suite.fifo.Dequeue()
 	suite.Error(err, "Locked queue does not allow to dequeue elements")
+
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeLockedQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeLockedQueue)
 }
 
 // dequeue an empty queue
 func (suite *FixedFIFOTestSuite) TestDequeueEmptyQueueSingleGR() {
 	val, err := suite.fifo.Dequeue()
+
+	// error expected
 	suite.Errorf(err, "Can't dequeue an empty queue")
+
+	// verify custom error type
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeEmptyQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeEmptyQueue)
+
+	// no value expected
 	suite.Equal(nil, val, "Can't get a value different than nil from an empty queue")
 }
 
@@ -208,8 +237,14 @@ func (suite *FixedFIFOTestSuite) TestDequeueClosedChannelSingleGR() {
 
 	// dequeue after the queue's channel was closed
 	val, err := suite.fifo.Dequeue()
-	suite.Error(err, "error expected after internal queue channel was closed")
+
 	suite.Nil(val, "nil value expected after internal channel was closed")
+	suite.Error(err, "error expected after internal queue channel was closed")
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeInternalChannelClosed, customError.Code(), "Expected code: '%v'", QueueErrorCodeInternalChannelClosed)
 }
 
 // TestDequeueMultipleGRs dequeues elements concurrently

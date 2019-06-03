@@ -1,10 +1,5 @@
 package goconcurrentqueue
 
-import (
-	"errors"
-	"fmt"
-)
-
 // Fixed capacity FIFO (First In First Out) concurrent queue
 type FixedFIFO struct {
 	queue    chan interface{}
@@ -25,20 +20,20 @@ func (st *FixedFIFO) initialize(capacity int) {
 
 func (st *FixedFIFO) Enqueue(value interface{}) error {
 	if st.IsLocked() {
-		return errors.New("The queue is locked")
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
 	select {
 	case st.queue <- value:
 		return nil
 	default:
-		return errors.New("FixedFIFO queue is at full capacity")
+		return NewQueueError(QueueErrorCodeFullCapacity, "FixedFIFO queue is at full capacity")
 	}
 }
 
 func (st *FixedFIFO) Dequeue() (interface{}, error) {
 	if st.IsLocked() {
-		return nil, errors.New("The queue is locked")
+		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
 	select {
@@ -46,9 +41,9 @@ func (st *FixedFIFO) Dequeue() (interface{}, error) {
 		if ok {
 			return value, nil
 		}
-		return nil, errors.New("internal channel is closed")
+		return nil, NewQueueError(QueueErrorCodeInternalChannelClosed, "internal channel is closed")
 	default:
-		return nil, fmt.Errorf("queue is empty")
+		return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue")
 	}
 }
 
