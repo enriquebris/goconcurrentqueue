@@ -44,7 +44,14 @@ func (suite *FIFOTestSuite) TestEnqueueLockSingleGR() {
 	suite.NoError(suite.fifo.Enqueue(1), "Unlocked queue allows to enqueue elements")
 
 	suite.fifo.Lock()
-	suite.Error(suite.fifo.Enqueue(1), "Locked queue does not allow to enqueue elements")
+	err := suite.fifo.Enqueue(1)
+	suite.Error(err, "Locked queue does not allow to enqueue elements")
+
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeLockedQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeLockedQueue)
 }
 
 // single enqueue (1 element, 1 goroutine)
@@ -162,6 +169,12 @@ func (suite *FIFOTestSuite) TestGetLockSingleGR() {
 	suite.fifo.Lock()
 	_, err = suite.fifo.Get(0)
 	suite.Error(err, "Locked queue does not allow to get elements")
+
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeLockedQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeLockedQueue)
 }
 
 // get a valid element
@@ -183,9 +196,14 @@ func (suite *FIFOTestSuite) TestGetInvalidElementSingleGR() {
 
 	// verify error
 	suite.Error(err, "An error should be returned after ask for a no existent element")
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeIndexOutOfBounds, customError.Code(), "Expected code: '%v'", QueueErrorCodeIndexOutOfBounds)
 
 	// verify element's value
-	suite.Equalf(val, nil, "Nil should be returner, currently returned: %v", val)
+	suite.Equalf(val, nil, "Nil should be returned, currently returned: %v", val)
 }
 
 // call Get concurrently
@@ -227,7 +245,14 @@ func (suite *FIFOTestSuite) TestRemoveLockSingleGR() {
 
 	suite.fifo.Enqueue(1)
 	suite.fifo.Lock()
-	suite.Error(suite.fifo.Remove(0), "Locked queue does not allow to remove elements")
+	err := suite.fifo.Remove(0)
+	suite.Error(err, "Locked queue does not allow to remove elements")
+
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeLockedQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeLockedQueue)
 }
 
 // remove elements
@@ -247,6 +272,11 @@ func (suite *FIFOTestSuite) TestRemoveSingleGR() {
 	// remove element having a wrong index
 	err3 := suite.fifo.Remove(1)
 	suite.Errorf(err3, "The index of the element to remove is out of bounds")
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err3.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeIndexOutOfBounds, customError.Code(), "Expected code: '%v'", QueueErrorCodeIndexOutOfBounds)
 }
 
 // TestRemoveMultipleGRs removes elements concurrently.
@@ -300,13 +330,29 @@ func (suite *FIFOTestSuite) TestDequeueLockSingleGR() {
 	suite.fifo.Enqueue(1)
 	suite.fifo.Lock()
 	_, err = suite.fifo.Dequeue()
+	// error expected
 	suite.Error(err, "Locked queue does not allow to dequeue elements")
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeLockedQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeLockedQueue)
 }
 
 // dequeue an empty queue
 func (suite *FIFOTestSuite) TestDequeueEmptyQueueSingleGR() {
 	val, err := suite.fifo.Dequeue()
+
+	// error expected
 	suite.Errorf(err, "Can't dequeue an empty queue")
+
+	// verify custom error type
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeEmptyQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeEmptyQueue)
+
+	// no value expected
 	suite.Equal(nil, val, "Can't get a value different than nil from an empty queue")
 }
 

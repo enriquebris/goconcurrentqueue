@@ -1,4 +1,4 @@
-[![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.3.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.3.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
+[![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.4.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.4.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
 
 # goconcurrentqueue - Concurrent safe queues
 The package goconcurrentqueue offers a public interface Queue with the most common methods for a [queue](https://en.wikipedia.org/wiki/Queue_(abstract_data_type)).
@@ -162,6 +162,10 @@ func workWithQueue(queue goconcurrentqueue.Queue) error {
 ```
 
 ## History
+
+### v0.4.0
+
+- Added QueueError (custom error)
 
 ### v0.3.0
 
