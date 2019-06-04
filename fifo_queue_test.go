@@ -3,6 +3,7 @@ package goconcurrentqueue
 import (
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 )
@@ -63,6 +64,21 @@ func (suite *FIFOTestSuite) TestEnqueueLenSingleGR() {
 	suite.fifo.Enqueue(5)
 	len = suite.fifo.GetLen()
 	suite.Equalf(2, len, "Expected number of elements in queue: 2, currently: %v", len)
+}
+
+// single enqueue and wait for next element
+func (suite *FIFOTestSuite) TestEnqueueWaitForNextElementSingleGR() {
+	waitForNextElement := make(chan interface{})
+	// add the listener manually (ONLY for testings purposes)
+	suite.fifo.waitForNextElementChan <- waitForNextElement
+
+	value := 100
+	// enqueue from a different GR to avoid blocking the listener channel
+	go suite.fifo.Enqueue(value)
+	// wait for the enqueued element
+	result := <-waitForNextElement
+
+	suite.Equal(value, result)
 }
 
 // TestEnqueueLenMultipleGR enqueues elements concurrently
@@ -413,6 +429,149 @@ func (suite *FIFOTestSuite) TestDequeueMultipleGRs() {
 	val, err := suite.fifo.Dequeue()
 	suite.NoError(err, "No error should be returned when dequeuing an existent element")
 	suite.Equalf(totalElementsToDequeue, val, "The expected last element's value should be: %v", totalElementsToEnqueue-totalElementsToDequeue)
+}
+
+// ***************************************************************************************
+// ** DequeueOrWaitForNextElement
+// ***************************************************************************************
+
+// single GR Locked queue
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementLockSingleGR() {
+	suite.fifo.Lock()
+	result, err := suite.fifo.DequeueOrWaitForNextElement()
+	suite.Nil(result, "No value expected if queue is locked")
+	suite.Error(err, "Locked queue does not allow to enqueue elements")
+
+	// verify custom error: code: QueueErrorCodeLockedQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeLockedQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeLockedQueue)
+}
+
+// single GR DequeueOrWaitForNextElement with a previous enqueued element
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementWithEnqueuedElementSingleGR() {
+	value := 100
+	len := suite.fifo.GetLen()
+	suite.fifo.Enqueue(value)
+
+	result, err := suite.fifo.DequeueOrWaitForNextElement()
+
+	suite.NoError(err)
+	suite.Equal(value, result)
+	// length must be exactly the same as it was before
+	suite.Equal(len, suite.fifo.GetLen())
+}
+
+// single GR DequeueOrWaitForNextElement 1 element
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementWithEmptyQueue() {
+	var (
+		value  = 100
+		result interface{}
+		err    error
+		done   = make(chan struct{})
+	)
+
+	// waiting for next enqueued element
+	go func() {
+		result, err = suite.fifo.DequeueOrWaitForNextElement()
+		done <- struct{}{}
+	}()
+
+	// enqueue an element
+	go func() {
+		suite.fifo.Enqueue(value)
+	}()
+
+	select {
+	// wait for the dequeued element
+	case <-done:
+		suite.NoError(err)
+		suite.Equal(value, result)
+
+	// the following comes first if more time than expected happened while waiting for the dequeued element
+	case <-time.After(1 * time.Second):
+		suite.Fail("too much time waiting for the enqueued element")
+
+	}
+}
+
+// single GR calling DequeueOrWaitForNextElement (WaitForNextElementChanCapacity + 1) times, last one should return error
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementWithFullWaitingChannel() {
+	// enqueue WaitForNextElementChanCapacity listeners to future enqueued elements
+	for i := 0; i < WaitForNextElementChanCapacity; i++ {
+		suite.fifo.waitForNextElementChan <- make(chan interface{})
+	}
+
+	result, err := suite.fifo.DequeueOrWaitForNextElement()
+	suite.Nil(result)
+	suite.Error(err)
+	// verify custom error: code: QueueErrorCodeEmptyQueue
+	customError, ok := err.(*QueueError)
+	suite.True(ok, "Expected error type: QueueError")
+	// verify custom error code
+	suite.Equalf(QueueErrorCodeEmptyQueue, customError.Code(), "Expected code: '%v'", QueueErrorCodeEmptyQueue)
+}
+
+// multiple GRs, calling DequeueOrWaitForNextElement from different GRs and enqueuing the expected values later
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
+	var (
+		wg sync.WaitGroup
+		mp sync.Map
+	)
+
+	for i := 0; i < WaitForNextElementChanCapacity; i++ {
+		go func() {
+			// wait for the next enqueued element
+			result, err := suite.fifo.DequeueOrWaitForNextElement()
+			// no error && no nil result
+			suite.NoError(err)
+			suite.NotNil(result)
+
+			// assure that each returned element wasn't returned earlier
+			_, ok := mp.Load(result)
+			suite.Falsef(ok, "Duplicated value: %v", result)
+			// save the result to let other GRs know that it was already returned
+			mp.Store(result, result)
+
+			// let the wg.Wait() know that this GR is done
+			wg.Done()
+		}()
+	}
+
+	// enqueue all needed elements
+	for i := 0; i < WaitForNextElementChanCapacity; i++ {
+		wg.Add(1)
+		suite.fifo.Enqueue(i)
+	}
+
+	// wait until all GRs dequeue the elements
+	wg.Wait()
+}
+
+// single GR, DequeueOrWaitForNextElement() should dequeue from 0 to WaitForNextElementChanCapacity in asc order
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementSingleGR() {
+	var wg sync.WaitGroup
+
+	go func(max int) {
+		for i := 0; i < max; i++ {
+			result, err := suite.fifo.DequeueOrWaitForNextElement()
+
+			suite.NoError(err)
+			// the order should be from 0 to max
+			suite.Equal(result, i)
+
+			wg.Done()
+		}
+	}(WaitForNextElementChanCapacity)
+
+	for i := 0; i < WaitForNextElementChanCapacity; i++ {
+		wg.Add(1)
+		suite.fifo.Enqueue(i)
+	}
+
+	// wait for the GR dequeueing elements
+	wg.Wait()
 }
 
 // ***************************************************************************************
