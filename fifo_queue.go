@@ -32,7 +32,7 @@ func (st *FIFO) initialize() {
 	st.waitForNextElementChan = make(chan chan interface{}, WaitForNextElementChanCapacity)
 }
 
-// Enqueue enqueues an element
+// Enqueue enqueues an element. Returns error if queue is locked.
 func (st *FIFO) Enqueue(value interface{}) error {
 	if st.isLocked {
 		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
@@ -55,7 +55,7 @@ func (st *FIFO) Enqueue(value interface{}) error {
 	return nil
 }
 
-// Dequeue dequeues an element
+// Dequeue dequeues an element. Returns error if queue is locked or empty.
 func (st *FIFO) Dequeue() (interface{}, error) {
 	if st.isLocked {
 		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
@@ -75,14 +75,18 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 	return elementToReturn, nil
 }
 
-// DequeueOrWaitForNextElement dequeues an element (if exist) or waits until the next element get enqueued and returns it.
+// DequeueOrWaitForNextElement dequeues an element (if exist) or waits until the next element gets enqueued and returns it.
 // Multiple calls to DequeueOrWaitForNextElement() would enqueue multiple "listeners" for future enqueued elements.
 func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
 	if st.isLocked {
 		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
+	// get the slice's len
+	st.rwmutex.Lock()
 	len := len(st.slice)
+	st.rwmutex.Unlock()
+
 	if len == 0 {
 		// channel to wait for next enqueued element
 		waitChan := make(chan interface{})
