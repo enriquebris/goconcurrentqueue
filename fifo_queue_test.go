@@ -517,7 +517,10 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementWithFullWaitingChanne
 func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 	var (
 		wg sync.WaitGroup
-		mp sync.Map
+		// channel to enqueue dequeued values
+		dequeuedValues = make(chan int, WaitForNextElementChanCapacity)
+		// map[dequeued_value] = times dequeued
+		mp = make(map[int]int)
 	)
 
 	for i := 0; i < WaitForNextElementChanCapacity; i++ {
@@ -528,11 +531,9 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 			suite.NoError(err)
 			suite.NotNil(result)
 
-			// assure that each returned element wasn't returned earlier
-			_, ok := mp.Load(result)
-			suite.Falsef(ok, "Duplicated value: %v", result)
-			// save the result to let other GRs know that it was already returned
-			mp.Store(result, result)
+			// send each dequeued element into the dequeuedValues channel
+			resultInt, _ := result.(int)
+			dequeuedValues <- resultInt
 
 			// let the wg.Wait() know that this GR is done
 			wg.Done()
@@ -543,10 +544,26 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 	for i := 0; i < WaitForNextElementChanCapacity; i++ {
 		wg.Add(1)
 		suite.fifo.Enqueue(i)
+		// save the enqueued value as index
+		mp[i] = 0
 	}
 
 	// wait until all GRs dequeue the elements
 	wg.Wait()
+	// close dequeuedValues channel in order to only read the previous enqueued values (from the channel)
+	close(dequeuedValues)
+
+	// verify that all enqueued values were dequeued
+	for v := range dequeuedValues {
+		val, ok := mp[v]
+		suite.Truef(ok, "element dequeued but never enqueued: %v", val)
+		// increment the m[p] value meaning the value p was dequeued
+		mp[v] = val + 1
+	}
+	// verify that there are no duplicates
+	for k, v := range mp {
+		suite.Equalf(1, v, "%v was dequeued %v times", k, v)
+	}
 }
 
 // single GR, DequeueOrWaitForNextElement() should dequeue from 0 to WaitForNextElementChanCapacity in asc order
