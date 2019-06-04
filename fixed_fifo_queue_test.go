@@ -345,7 +345,7 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementWithEmptyQueue()
 		suite.Equal(value, result)
 
 	// the following comes first if more time than expected happened while waiting for the dequeued element
-	case <-time.After(1 * time.Second):
+	case <-time.After(2 * time.Second):
 		suite.Fail("too much time waiting for the enqueued element")
 
 	}
