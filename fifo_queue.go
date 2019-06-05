@@ -5,12 +5,18 @@ import (
 	"sync"
 )
 
+const (
+	WaitForNextElementChanCapacity = 100
+)
+
 // FIFO (First In First Out) concurrent queue
 type FIFO struct {
 	slice       []interface{}
 	rwmutex     sync.RWMutex
 	lockRWmutex sync.RWMutex
 	isLocked    bool
+	// queue for watchers that will wait for next elements (if queue is empty at DequeueOrWaitForNextElement execution )
+	waitForNextElementChan chan chan interface{}
 }
 
 // NewFIFO returns a new FIFO concurrent queue
@@ -23,22 +29,33 @@ func NewFIFO() *FIFO {
 
 func (st *FIFO) initialize() {
 	st.slice = make([]interface{}, 0)
+	st.waitForNextElementChan = make(chan chan interface{}, WaitForNextElementChanCapacity)
 }
 
-// Enqueue enqueues an element
+// Enqueue enqueues an element. Returns error if queue is locked.
 func (st *FIFO) Enqueue(value interface{}) error {
 	if st.isLocked {
 		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
-	st.rwmutex.Lock()
-	defer st.rwmutex.Unlock()
+	// check if there is a listener waiting for the next element (this element)
+	select {
+	case listener := <-st.waitForNextElementChan:
+		// send the element through the listener's channel instead of enqueue it
+		listener <- value
 
-	st.slice = append(st.slice, value)
+	default:
+		// lock the object to enqueue the element into the slice
+		st.rwmutex.Lock()
+		defer st.rwmutex.Unlock()
+		// enqueue the element
+		st.slice = append(st.slice, value)
+	}
+
 	return nil
 }
 
-// Dequeue dequeues an element
+// Dequeue dequeues an element. Returns error if queue is locked or empty.
 func (st *FIFO) Dequeue() (interface{}, error) {
 	if st.isLocked {
 		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
@@ -52,6 +69,43 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 		return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue")
 	}
 
+	elementToReturn := st.slice[0]
+	st.slice = st.slice[1:]
+
+	return elementToReturn, nil
+}
+
+// DequeueOrWaitForNextElement dequeues an element (if exist) or waits until the next element gets enqueued and returns it.
+// Multiple calls to DequeueOrWaitForNextElement() would enqueue multiple "listeners" for future enqueued elements.
+func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
+	if st.isLocked {
+		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+
+	// get the slice's len
+	st.rwmutex.Lock()
+	len := len(st.slice)
+	st.rwmutex.Unlock()
+
+	if len == 0 {
+		// channel to wait for next enqueued element
+		waitChan := make(chan interface{})
+
+		select {
+		// enqueue a watcher into the watchForNextElementChannel to wait for the next element
+		case st.waitForNextElementChan <- waitChan:
+			// return the next enqueued element, if any
+			return <-waitChan, nil
+		default:
+			// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
+			return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue and can't wait for next element")
+		}
+	}
+
+	st.rwmutex.Lock()
+	defer st.rwmutex.Unlock()
+
+	// there is at least one element into the queue
 	elementToReturn := st.slice[0]
 	st.slice = st.slice[1:]
 

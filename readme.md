@@ -1,7 +1,7 @@
-[![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.4.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.4.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
+[![godoc reference](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/enriquebris/goconcurrentqueue) ![version](https://img.shields.io/badge/version-v0.5.0-yellowgreen.svg?style=flat "goconcurrentqueue v0.5.0")  [![Go Report Card](https://goreportcard.com/badge/github.com/enriquebris/goconcurrentqueue)](https://goreportcard.com/report/github.com/enriquebris/goconcurrentqueue)  [![Build Status](https://api.travis-ci.org/enriquebris/goconcurrentqueue.svg?branch=master)](https://travis-ci.org/enriquebris/goconcurrentqueue) [![codecov](https://codecov.io/gh/enriquebris/goconcurrentqueue/branch/master/graph/badge.svg)](https://codecov.io/gh/enriquebris/goconcurrentqueue)
 
 # goconcurrentqueue - Concurrent safe queues
-The package goconcurrentqueue offers a public interface Queue with the most common methods for a [queue](https://en.wikipedia.org/wiki/Queue_(abstract_data_type)).
+The package goconcurrentqueue offers a public interface Queue with methods for a [queue](https://en.wikipedia.org/wiki/Queue_(abstract_data_type)).
 It comes with multiple Queue's concurrent-safe implementations, meaning they could be used concurrently by multiple goroutines without adding race conditions.
 
 ## Topics
@@ -117,6 +117,43 @@ func main() {
 }
 ```
 
+### Wait until an element gets enqueued
+
+```go
+package main
+
+import (
+	"fmt"
+	"time"
+
+	"github.com/enriquebris/goconcurrentqueue"
+)
+
+func main() {
+	var (
+		fifo = goconcurrentqueue.NewFIFO()
+		done = make(chan struct{})
+	)
+
+	go func() {
+		fmt.Println("1 - Waiting for next enqueued element")
+		value, _ := fifo.DequeueOrWaitForNextElement()
+		fmt.Printf("2 - Dequeued element: %v\n", value)
+
+		done <- struct{}{}
+	}()
+
+	fmt.Println("3 - Go to sleep for 3 seconds")
+	time.Sleep(3 * time.Second)
+
+	fmt.Println("4 - Enqueue element")
+	fifo.Enqueue(100)
+
+	<-done
+}
+
+```
+
 ### Dependency Inversion Principle using concurrent-safe queues
 
 *High level modules should not depend on low level modules. Both should depend on abstractions.* Robert C. Martin
@@ -162,6 +199,10 @@ func workWithQueue(queue goconcurrentqueue.Queue) error {
 ```
 
 ## History
+
+### v0.5.0
+
+- Added DequeueOrWaitForNextElement()
 
 ### v0.4.0
 
