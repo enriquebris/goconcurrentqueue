@@ -566,31 +566,6 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 	}
 }
 
-// single GR, DequeueOrWaitForNextElement() should dequeue from 0 to WaitForNextElementChanCapacity in asc order
-func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementSingleGR() {
-	var wg sync.WaitGroup
-
-	go func(max int) {
-		for i := 0; i < max; i++ {
-			result, err := suite.fifo.DequeueOrWaitForNextElement()
-
-			suite.NoError(err)
-			// the order should be from 0 to max
-			suite.Equal(result, i)
-
-			wg.Done()
-		}
-	}(WaitForNextElementChanCapacity)
-
-	for i := 0; i < WaitForNextElementChanCapacity; i++ {
-		wg.Add(1)
-		suite.fifo.Enqueue(i)
-	}
-
-	// wait for the GR dequeueing elements
-	wg.Wait()
-}
-
 // ***************************************************************************************
 // ** Lock / Unlock / IsLocked
 // ***************************************************************************************
