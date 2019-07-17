@@ -3,10 +3,11 @@ package goconcurrentqueue
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 const (
-	WaitForNextElementChanCapacity = 100
+	WaitForNextElementChanCapacity = 1000
 )
 
 // FIFO (First In First Out) concurrent queue
@@ -42,14 +43,24 @@ func (st *FIFO) Enqueue(value interface{}) error {
 	select {
 	case listener := <-st.waitForNextElementChan:
 		// send the element through the listener's channel instead of enqueue it
-		listener <- value
+		select {
+		case listener <- value:
+		default:
+			// enqueue if listener is not ready
+
+			// lock the object to enqueue the element into the slice
+			st.rwmutex.Lock()
+			// enqueue the element
+			st.slice = append(st.slice, value)
+			defer st.rwmutex.Unlock()
+		}
 
 	default:
 		// lock the object to enqueue the element into the slice
 		st.rwmutex.Lock()
-		defer st.rwmutex.Unlock()
 		// enqueue the element
 		st.slice = append(st.slice, value)
+		defer st.rwmutex.Unlock()
 	}
 
 	return nil
@@ -78,38 +89,59 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 // DequeueOrWaitForNextElement dequeues an element (if exist) or waits until the next element gets enqueued and returns it.
 // Multiple calls to DequeueOrWaitForNextElement() would enqueue multiple "listeners" for future enqueued elements.
 func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
-	if st.isLocked {
-		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
-	}
-
-	// get the slice's len
-	st.rwmutex.Lock()
-	len := len(st.slice)
-	st.rwmutex.Unlock()
-
-	if len == 0 {
-		// channel to wait for next enqueued element
-		waitChan := make(chan interface{})
-
-		select {
-		// enqueue a watcher into the watchForNextElementChannel to wait for the next element
-		case st.waitForNextElementChan <- waitChan:
-			// return the next enqueued element, if any
-			return <-waitChan, nil
-		default:
-			// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
-			return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue and can't wait for next element")
+	for {
+		if st.isLocked {
+			return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 		}
+
+		// get the slice's len
+		st.rwmutex.Lock()
+		length := len(st.slice)
+		st.rwmutex.Unlock()
+
+		if length == 0 {
+			// channel to wait for next enqueued element
+			waitChan := make(chan interface{})
+
+			select {
+			// enqueue a watcher into the watchForNextElementChannel to wait for the next element
+			case st.waitForNextElementChan <- waitChan:
+
+				// re-checks every i*20 milliseconds
+				for i := 0; i < 10; i++ {
+					select {
+					case dequeuedItem := <-waitChan:
+						return dequeuedItem, nil
+					case <-time.After(time.Millisecond * time.Duration(i)):
+						if dequeuedItem, err := st.Dequeue(); err == nil {
+							return dequeuedItem, nil
+						}
+					}
+				}
+
+				// return the next enqueued element, if any
+				return <-waitChan, nil
+			default:
+				// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
+				return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue and can't wait for next element because there are too many DequeueOrWaitForNextElement() waiting")
+			}
+		}
+
+		st.rwmutex.Lock()
+		//defer st.rwmutex.Unlock()
+
+		// there is at least one element into the queue
+		// verify that at least 1 item resides on the queue
+		if len(st.slice) == 0 {
+			st.rwmutex.Unlock()
+			continue
+		}
+		elementToReturn := st.slice[0]
+		st.slice = st.slice[1:]
+
+		st.rwmutex.Unlock()
+		return elementToReturn, nil
 	}
-
-	st.rwmutex.Lock()
-	defer st.rwmutex.Unlock()
-
-	// there is at least one element into the queue
-	elementToReturn := st.slice[0]
-	st.slice = st.slice[1:]
-
-	return elementToReturn, nil
 }
 
 // Get returns an element's value and keeps the element at the queue
