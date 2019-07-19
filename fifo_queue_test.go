@@ -1,6 +1,7 @@
 package goconcurrentqueue
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -563,6 +564,91 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 	// verify that there are no duplicates
 	for k, v := range mp {
 		suite.Equalf(1, v, "%v was dequeued %v times", k, v)
+	}
+}
+
+// multiple GRs, calling DequeueOrWaitForNextElement from different GRs and enqueuing the expected values later
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR2() {
+	var (
+		done       = make(chan int, 10)
+		total      = 5000
+		results    = sync.Map{}
+		totalOk    = 0
+		totalError = 0
+	)
+
+	go func(fifo Queue, done chan int, total int) {
+		for i := 0; i < total; i++ {
+			go func(queue Queue, done chan int) {
+				rawValue, err := fifo.DequeueOrWaitForNextElement()
+				if err != nil {
+					fmt.Println(err)
+					// error
+					done <- -1
+				} else {
+					val, _ := rawValue.(int)
+					done <- val
+				}
+			}(fifo, done)
+
+			go func(queue Queue, value int) {
+				if err := fifo.Enqueue(value); err != nil {
+					fmt.Println(err)
+				}
+			}(fifo, i)
+		}
+	}(suite.fifo, done, total)
+
+	i := 0
+	for {
+		v := <-done
+		if v != -1 {
+			totalOk++
+			_, ok := results.Load(v)
+			suite.Falsef(ok, "duplicated value %v", v)
+
+			results.Store(v, true)
+		} else {
+			totalError++
+		}
+
+		i++
+		if i == total {
+			break
+		}
+	}
+
+	suite.Equal(total, totalError+totalOk)
+}
+
+// call DequeueOrWaitForNextElement(), wait some time and enqueue an item
+func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementGapSingleGR() {
+	var (
+		expectedValue = 50
+		done          = make(chan struct{}, 3)
+	)
+
+	// DequeueOrWaitForNextElement()
+	go func(fifo *FIFO, done chan struct{}) {
+		val, err := fifo.DequeueOrWaitForNextElement()
+		suite.NoError(err)
+		suite.Equal(expectedValue, val)
+		done <- struct{}{}
+	}(suite.fifo, done)
+
+	// wait and Enqueue function
+	go func(fifo *FIFO, done chan struct{}) {
+		time.Sleep(time.Millisecond * dequeueOrWaitForNextElementInvokeGapTime * dequeueOrWaitForNextElementInvokeGapTime)
+		suite.NoError(fifo.Enqueue(expectedValue))
+		done <- struct{}{}
+	}(suite.fifo, done)
+
+	for i := 0; i < 2; i++ {
+		select {
+		case <-done:
+		case <-time.After(2 * time.Millisecond * dequeueOrWaitForNextElementInvokeGapTime * dequeueOrWaitForNextElementInvokeGapTime):
+			suite.FailNow("Too much time waiting for the value")
+		}
 	}
 }
 

@@ -77,6 +77,7 @@ The numbers for the following charts were obtained by running the benchmarks in 
 ## Get started
 
 ### FIFO queue simple usage
+[Live code - playground](https://play.golang.org/p/CRhg7kX0ikH)
 
 ```go
 package main
@@ -118,6 +119,7 @@ func main() {
 ```
 
 ### Wait until an element gets enqueued
+[Live code - playground](https://play.golang.org/p/S7oSg3iUNhs)
 
 ```go
 package main
@@ -157,6 +159,8 @@ func main() {
 ### Dependency Inversion Principle using concurrent-safe queues
 
 *High level modules should not depend on low level modules. Both should depend on abstractions.* Robert C. Martin
+
+[Live code - playground](https://play.golang.org/p/3GAbyR7wrX7)
 
 ```go
 package main
@@ -199,6 +203,11 @@ func workWithQueue(queue goconcurrentqueue.Queue) error {
 ```
 
 ## History
+
+### v0.5.1
+
+- FIFO.DequeueOrWaitForNextElement() was modified to avoid deadlock when DequeueOrWaitForNextElement && Enqueue are invoked around the same time.
+- Added multiple goroutine unit testings for FIFO.DequeueOrWaitForNextElement() 
 
 ### v0.5.0
 

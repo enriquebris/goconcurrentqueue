@@ -7,7 +7,8 @@ import (
 )
 
 const (
-	WaitForNextElementChanCapacity = 1000
+	WaitForNextElementChanCapacity           = 1000
+	dequeueOrWaitForNextElementInvokeGapTime = 10
 )
 
 // FIFO (First In First Out) concurrent queue
@@ -107,8 +108,10 @@ func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
 			// enqueue a watcher into the watchForNextElementChannel to wait for the next element
 			case st.waitForNextElementChan <- waitChan:
 
-				// re-checks every i*20 milliseconds
-				for i := 0; i < 10; i++ {
+				// re-checks every i milliseconds (top: 10 times) ... the following verifies if an item was enqueued
+				// around the same time DequeueOrWaitForNextElement was invoked, meaning the waitChan wasn't yet sent over
+				// st.waitForNextElementChan
+				for i := 0; i < dequeueOrWaitForNextElementInvokeGapTime; i++ {
 					select {
 					case dequeuedItem := <-waitChan:
 						return dequeuedItem, nil
@@ -128,9 +131,7 @@ func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
 		}
 
 		st.rwmutex.Lock()
-		//defer st.rwmutex.Unlock()
 
-		// there is at least one element into the queue
 		// verify that at least 1 item resides on the queue
 		if len(st.slice) == 0 {
 			st.rwmutex.Unlock()
