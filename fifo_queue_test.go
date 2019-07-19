@@ -572,7 +572,7 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR2() {
 	var (
 		done       = make(chan int, 10)
 		total      = 2000
-		results    = sync.Map{}
+		results    = make(map[int]struct{})
 		totalOk    = 0
 		totalError = 0
 	)
@@ -604,10 +604,10 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR2() {
 		v := <-done
 		if v != -1 {
 			totalOk++
-			_, ok := results.Load(v)
+			_, ok := results[v]
 			suite.Falsef(ok, "duplicated value %v", v)
 
-			results.Store(v, true)
+			results[v] = struct{}{}
 		} else {
 			totalError++
 		}
