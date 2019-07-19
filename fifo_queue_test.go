@@ -571,7 +571,7 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR2() {
 	var (
 		done       = make(chan int, 10)
-		total      = 5000
+		total      = 2000
 		results    = sync.Map{}
 		totalOk    = 0
 		totalError = 0
