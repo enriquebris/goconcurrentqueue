@@ -69,6 +69,7 @@ The numbers for the following charts were obtained by running the benchmarks in 
 ### Enqueue
 
 ![concurrent-safe FixedFIFO vs FIFO . operation: enqueue](web/FixedFIFO-vs-FIFO-enqueue.png "concurrent-safe FixedFIFO vs FIFO . operation: enqueue")
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fenriquebris%2Fgoconcurrentqueue.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fenriquebris%2Fgoconcurrentqueue?ref=badge_shield)
 
 ### Dequeue
 
@@ -231,3 +232,7 @@ func workWithQueue(queue goconcurrentqueue.Queue) error {
 ### v0.1.0
 
 - First In First Out (FIFO) queue added
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fenriquebris%2Fgoconcurrentqueue.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fenriquebris%2Fgoconcurrentqueue?ref=badge_large)
