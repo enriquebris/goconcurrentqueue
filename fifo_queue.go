@@ -220,7 +220,8 @@ func (st *FIFO) IsLocked() bool {
 	return st.isLocked
 }
 
-func (st *FIFO) MoveTopWithId(index int) error {
+// MoveFrontWithId moves the element at index position to the front of the queue
+func (st *FIFO) MoveFrontWithId(index int) error {
 
 	if st.isLocked {
 		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
@@ -248,6 +249,7 @@ func (st *FIFO) MoveTopWithId(index int) error {
 	return nil
 }
 
+// MoveBackWithId moves the element at index position to the back of the queue
 func (st *FIFO) MoveBackWithId(index int) error {
 
 	if st.isLocked {

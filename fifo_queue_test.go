@@ -689,7 +689,7 @@ func (suite *FIFOTestSuite) TestMoveEmptyQueue() {
 		back = 1
 	)
 
-	suite.Error(suite.fifo.MoveTopWithId(top))
+	suite.Error(suite.fifo.MoveFrontWithId(top))
 	suite.Error(suite.fifo.MoveBackWithId(back))
 }
 
@@ -705,7 +705,7 @@ func (suite *FIFOTestSuite) TestMoveFront() {
 
 	result := []interface{}{5, 1, 2, 3, 4, 6, 7, 8, 9}
 
-	suite.NoError(suite.fifo.MoveTopWithId(top))
+	suite.NoError(suite.fifo.MoveFrontWithId(top))
 	suite.Equal(result, suite.fifo.slice)
 }
 
