@@ -28,8 +28,8 @@ func (suite *FIFOTestSuite) SetupTest() {
 
 // no elements at initialization
 func (suite *FIFOTestSuite) TestNoElementsAtInitialization() {
-	len := suite.fifo.GetLen()
-	suite.Equalf(0, len, "No elements expected at initialization, currently: %v", len)
+	length := suite.fifo.GetLen()
+	suite.Equalf(0, length, "No elements expected at initialization, currently: %v", length)
 }
 
 // unlocked at initialization
@@ -59,12 +59,12 @@ func (suite *FIFOTestSuite) TestEnqueueLockSingleGR() {
 // single enqueue (1 element, 1 goroutine)
 func (suite *FIFOTestSuite) TestEnqueueLenSingleGR() {
 	suite.fifo.Enqueue(testValue)
-	len := suite.fifo.GetLen()
-	suite.Equalf(1, len, "Expected number of elements in queue: 1, currently: %v", len)
+	length := suite.fifo.GetLen()
+	suite.Equalf(1, length, "Expected number of elements in queue: 1, currently: %v", length)
 
 	suite.fifo.Enqueue(5)
-	len = suite.fifo.GetLen()
-	suite.Equalf(2, len, "Expected number of elements in queue: 2, currently: %v", len)
+	length = suite.fifo.GetLen()
+	suite.Equalf(2, length, "Expected number of elements in queue: 2, currently: %v", length)
 }
 
 // single enqueue and wait for next element
@@ -382,15 +382,15 @@ func (suite *FIFOTestSuite) TestDequeueSingleGR() {
 	val, err := suite.fifo.Dequeue()
 	suite.NoError(err, "Unexpected error")
 	suite.Equal(testValue, val, "Wrong element's value")
-	len := suite.fifo.GetLen()
-	suite.Equal(1, len, "Incorrect number of queue elements")
+	length := suite.fifo.GetLen()
+	suite.Equal(1, length, "Incorrect number of queue elements")
 
 	// get the second element
 	val, err = suite.fifo.Dequeue()
 	suite.NoError(err, "Unexpected error")
 	suite.Equal(5, val, "Wrong element's value")
-	len = suite.fifo.GetLen()
-	suite.Equal(0, len, "Incorrect number of queue elements")
+	length = suite.fifo.GetLen()
+	suite.Equal(0, length, "Incorrect number of queue elements")
 
 }
 
@@ -453,7 +453,7 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementLockSingleGR() {
 // single GR DequeueOrWaitForNextElement with a previous enqueued element
 func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementWithEnqueuedElementSingleGR() {
 	value := 100
-	len := suite.fifo.GetLen()
+	length := suite.fifo.GetLen()
 	suite.fifo.Enqueue(value)
 
 	result, err := suite.fifo.DequeueOrWaitForNextElement()
@@ -461,7 +461,7 @@ func (suite *FIFOTestSuite) TestDequeueOrWaitForNextElementWithEnqueuedElementSi
 	suite.NoError(err)
 	suite.Equal(value, result)
 	// length must be exactly the same as it was before
-	suite.Equal(len, suite.fifo.GetLen())
+	suite.Equal(length, suite.fifo.GetLen())
 }
 
 // single GR DequeueOrWaitForNextElement 1 element
@@ -678,6 +678,76 @@ func (suite *FIFOTestSuite) TestIsLockedSingleGR() {
 
 	suite.fifo.Unlock()
 	suite.True(suite.fifo.isLocked == suite.fifo.IsLocked(), "fifo.IsLocked() has to be equal to fifo.isLocked")
+}
+
+// ***************************************************************************************
+// ** Swap
+// ***************************************************************************************
+func (suite *FIFOTestSuite) TestSwapEmptyQueue() {
+	const (
+		a = 4
+		b = 4
+	)
+
+	err := suite.fifo.Swap(a, b)
+
+	suite.Error(err)
+}
+
+func (suite *FIFOTestSuite) TestSwapIndexOutOfRange() {
+	const (
+		max = 2
+		a   = 4
+		b   = 3
+	)
+
+	for i := 0; i < max; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	err := suite.fifo.Swap(a, b)
+
+	suite.Error(err)
+}
+
+func (suite *FIFOTestSuite) TestSwapSameIndex() {
+	const (
+		max = 10
+		a   = 4
+		b   = 4
+	)
+
+	for i := 0; i < max; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	err := suite.fifo.Swap(a, b)
+
+	suite.Error(err)
+}
+
+func (suite *FIFOTestSuite) TestSwapElements() {
+
+	const (
+		max = 10
+		a   = 3
+		b   = 4
+	)
+
+	for i := 0; i < max; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	oldValueFromA, _ := suite.fifo.Get(a)
+	oldValueFromB, _ := suite.fifo.Get(b)
+
+	suite.fifo.Swap(a, b)
+
+	newValueFromA, _ := suite.fifo.Get(a)
+	newValueFromB, _ := suite.fifo.Get(b)
+
+	suite.Equal(oldValueFromA, newValueFromB)
+	suite.Equal(oldValueFromB, newValueFromA)
 }
 
 // ***************************************************************************************
