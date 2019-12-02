@@ -219,3 +219,58 @@ func (st *FIFO) IsLocked() bool {
 
 	return st.isLocked
 }
+
+func (st *FIFO) MoveTopWithId(index int) error {
+
+	if st.isLocked {
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+	st.rwmutex.Lock()
+	defer st.rwmutex.Unlock()
+
+	length := len(st.slice)
+	if length == 0 {
+		return NewQueueError(QueueErrorCodeEmptyQueue, "Empty queue")
+	}
+
+	if index == 0 {
+		return NewQueueError(QueueErrorCodeIndexFirstPosition, "Element already in first position")
+	}
+
+	if index > length {
+		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index is out of bounds")
+	}
+
+	for i := index; i >= 1; i-- {
+		st.slice[i], st.slice[i-1] = st.slice[i-1], st.slice[i]
+	}
+
+	return nil
+}
+
+func (st *FIFO) MoveBackWithId(index int) error {
+
+	if st.isLocked {
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+	st.rwmutex.Lock()
+	defer st.rwmutex.Unlock()
+
+	length := len(st.slice)
+	if length == 0 {
+		return NewQueueError(QueueErrorCodeEmptyQueue, "Empty queue")
+	}
+
+	if index == length-1 {
+		return NewQueueError(QueueErrorCodeIndexFirstPosition, "Element already in last position")
+	}
+
+	if index > length {
+		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index is out of bounds")
+	}
+
+	for i := index; i < length-1; i++ {
+		st.slice[i], st.slice[i+1] = st.slice[i+1], st.slice[i]
+	}
+	return nil
+}
