@@ -696,12 +696,12 @@ func (suite *FIFOTestSuite) TestSwapEmptyQueue() {
 
 func (suite *FIFOTestSuite) TestSwapIndexOutOfRange() {
 	const (
-		max = 2
-		a   = 4
-		b   = 3
+		size = 2
+		a    = 4
+		b    = 3
 	)
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < size; i++ {
 		suite.fifo.Enqueue(i)
 	}
 
@@ -712,12 +712,12 @@ func (suite *FIFOTestSuite) TestSwapIndexOutOfRange() {
 
 func (suite *FIFOTestSuite) TestSwapSameIndex() {
 	const (
-		max = 10
-		a   = 4
-		b   = 4
+		size = 10
+		a    = 4
+		b    = 4
 	)
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < size; i++ {
 		suite.fifo.Enqueue(i)
 	}
 
@@ -729,12 +729,12 @@ func (suite *FIFOTestSuite) TestSwapSameIndex() {
 func (suite *FIFOTestSuite) TestSwapElements() {
 
 	const (
-		max = 10
-		a   = 3
-		b   = 4
+		size = 10
+		a    = 3
+		b    = 4
 	)
 
-	for i := 0; i < max; i++ {
+	for i := 0; i < size; i++ {
 		suite.fifo.Enqueue(i)
 	}
 

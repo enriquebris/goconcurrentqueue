@@ -235,11 +235,11 @@ func (st *FIFO) Swap(a int, b int) *QueueError {
 	}
 
 	if a == b {
-		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Indexes are the same number")
+		return NewQueueError(QueueErrorCodeIndexesMatch, "Indexes are the same number")
 	}
 
 	if a > length || b > length {
-		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Indexes out of range")
+		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index out of bounds")
 	}
 
 	st.slice[a], st.slice[b] = st.slice[b], st.slice[a]
