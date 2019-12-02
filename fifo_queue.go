@@ -262,7 +262,7 @@ func (st *FIFO) MoveBackWithId(index int) error {
 	}
 
 	if index == length-1 {
-		return NewQueueError(QueueErrorCodeIndexFirstPosition, "Element already in last position")
+		return NewQueueError(QueueErrorCodeIndexLastPosition, "Element already in last position")
 	}
 
 	if index > length {
