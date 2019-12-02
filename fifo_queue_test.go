@@ -681,6 +681,51 @@ func (suite *FIFOTestSuite) TestIsLockedSingleGR() {
 }
 
 // ***************************************************************************************
+// ** Move elements inside queue
+// ***************************************************************************************
+func (suite *FIFOTestSuite) TestMoveEmptyQueue() {
+	const (
+		top  = 10
+		back = 1
+	)
+
+	suite.Error(suite.fifo.MoveTopWithId(top))
+	suite.Error(suite.fifo.MoveBackWithId(back))
+}
+
+func (suite *FIFOTestSuite) TestMoveFront() {
+	const (
+		size = 10
+		top  = 4
+	)
+
+	for i := 1; i < size; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	result := []interface{}{5, 1, 2, 3, 4, 6, 7, 8, 9}
+
+	suite.NoError(suite.fifo.MoveTopWithId(top))
+	suite.Equal(result, suite.fifo.slice)
+}
+
+func (suite *FIFOTestSuite) TestMoveBack() {
+	const (
+		size = 10
+		back = 4
+	)
+
+	for i := 1; i < size; i++ {
+		suite.fifo.Enqueue(i)
+	}
+
+	result := []interface{}{1, 2, 3, 4, 6, 7, 8, 9, 5}
+
+	suite.NoError(suite.fifo.MoveBackWithId(back))
+	suite.Equal(result, suite.fifo.slice)
+}
+
+// ***************************************************************************************
 // ** Run suite
 // ***************************************************************************************
 
