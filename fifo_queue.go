@@ -242,6 +242,6 @@ func (st *FIFO) Swap(a int, b int) *QueueError {
 		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Indexes out of range")
 	}
 
-	st.slice[a], st.slice[b] = st.slice[a], st.slice[b]
+	st.slice[a], st.slice[b] = st.slice[b], st.slice[a]
 	return nil
 }
