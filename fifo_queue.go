@@ -76,8 +76,8 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 	st.rwmutex.Lock()
 	defer st.rwmutex.Unlock()
 
-	len := len(st.slice)
-	if len == 0 {
+	length := len(st.slice)
+	if length == 0 {
 		return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue")
 	}
 
@@ -220,6 +220,33 @@ func (st *FIFO) IsLocked() bool {
 	return st.isLocked
 }
 
+// Swap swaps values from position a to position b and vice versa.
+func (st *FIFO) Swap(a int, b int) *QueueError {
+	if st.isLocked {
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+
+	st.rwmutex.Lock()
+	defer st.rwmutex.Unlock()
+
+	length := len(st.slice)
+	if length == 0 {
+		return NewQueueError(QueueErrorCodeEmptyQueue, "Empty queue")
+	}
+
+	if a == b {
+		return NewQueueError(QueueErrorCodeIndexesMatch, "Indexes are the same number")
+	}
+
+	if a >= length || b >= length {
+		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index out of bounds")
+	}
+
+	st.slice[a], st.slice[b] = st.slice[b], st.slice[a]
+
+	return nil
+}
+
 // MoveFrontWithId moves the element at index position to the front of the queue
 func (st *FIFO) MoveFrontWithId(index int) error {
 
@@ -281,3 +308,5 @@ func (st *FIFO) MoveBackWithId(index int) error {
 
 	return nil
 }
+
+
