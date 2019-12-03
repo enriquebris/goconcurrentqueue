@@ -235,13 +235,14 @@ func (st *FIFO) MoveFrontWithId(index int) error {
 	}
 
 	if index == 0 {
-		return NewQueueError(QueueErrorCodeIndexFirstPosition, "Element already in first position")
+		return NewQueueError(QueueErrorCodeIndexFirstPosition, "Element already is in first position")
 	}
 
-	if index > length {
+	if index >= length {
 		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index is out of bounds")
 	}
 
+	// The element at position i moves using bubble sort algorithm, one position at time, all the way to the front of the queue.
 	for i := index; i >= 1; i-- {
 		st.slice[i], st.slice[i-1] = st.slice[i-1], st.slice[i]
 	}
@@ -264,15 +265,17 @@ func (st *FIFO) MoveBackWithId(index int) error {
 	}
 
 	if index == length-1 {
-		return NewQueueError(QueueErrorCodeIndexLastPosition, "Element already in last position")
+		return NewQueueError(QueueErrorCodeIndexLastPosition, "Element already is in last position")
 	}
 
-	if index > length {
+	if index >= length {
 		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index is out of bounds")
 	}
 
+	// The element at position i moves using bubble sort algorithm, one position at time, all the way to the back of the queue.
 	for i := index; i < length-1; i++ {
 		st.slice[i], st.slice[i+1] = st.slice[i+1], st.slice[i]
 	}
+
 	return nil
 }
