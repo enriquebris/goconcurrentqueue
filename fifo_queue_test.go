@@ -681,6 +681,23 @@ func (suite *FIFOTestSuite) TestIsLockedSingleGR() {
 }
 
 // ***************************************************************************************
+// ** Get all elements
+// ***************************************************************************************
+func (suite *FIFOTestSuite) TestGetAll() {
+	const (
+		size = 10
+	)
+	var slice []int
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i)
+		slice = append(slice, i)
+	}
+	result, err := suite.fifo.GetAll()
+	suite.NoError(err)
+	suite.Equal(slice, result)
+}
+
+// ***************************************************************************************
 // ** Run suite
 // ***************************************************************************************
 
