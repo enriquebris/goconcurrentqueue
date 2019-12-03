@@ -691,10 +691,10 @@ func (suite *FIFOTestSuite) TestSwapEmptyQueue() {
 
 	err := suite.fifo.Swap(a, b)
 
-	suite.Error(err)
+	suite.EqualError(err, "Empty queue")
 }
 
-func (suite *FIFOTestSuite) TestSwapIndexOutOfRange() {
+func (suite *FIFOTestSuite) TestSwapIndexOutOfBounds() {
 	const (
 		size = 2
 		a    = 4
@@ -707,7 +707,7 @@ func (suite *FIFOTestSuite) TestSwapIndexOutOfRange() {
 
 	err := suite.fifo.Swap(a, b)
 
-	suite.Error(err)
+	suite.EqualError(err, "Index out of bounds")
 }
 
 func (suite *FIFOTestSuite) TestSwapSameIndex() {
@@ -723,7 +723,7 @@ func (suite *FIFOTestSuite) TestSwapSameIndex() {
 
 	err := suite.fifo.Swap(a, b)
 
-	suite.Error(err)
+	suite.EqualError(err, "Indexes are the same number")
 }
 
 func (suite *FIFOTestSuite) TestSwapElements() {
