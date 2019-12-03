@@ -681,7 +681,7 @@ func (suite *FIFOTestSuite) TestIsLockedSingleGR() {
 }
 
 // ***************************************************************************************
-// ** Move elements inside queue
+// ** Move elements inside an empty queue
 // ***************************************************************************************
 func (suite *FIFOTestSuite) TestMoveEmptyQueue() {
 	const (
@@ -689,40 +689,99 @@ func (suite *FIFOTestSuite) TestMoveEmptyQueue() {
 		back = 1
 	)
 
-	suite.Error(suite.fifo.MoveFrontWithId(top))
-	suite.Error(suite.fifo.MoveBackWithId(back))
+	suite.EqualError(suite.fifo.MoveFrontWithId(top), "Empty queue")
+	suite.EqualError(suite.fifo.MoveBackWithId(back), "Empty queue")
 }
 
+// ***************************************************************************************
+// ** Move elements to the front
+// ***************************************************************************************
 func (suite *FIFOTestSuite) TestMoveFront() {
 	const (
 		size = 10
 		top  = 4
 	)
 
-	for i := 1; i < size; i++ {
-		suite.fifo.Enqueue(i)
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i + 1)
 	}
 
-	result := []interface{}{5, 1, 2, 3, 4, 6, 7, 8, 9}
+	result := []interface{}{5, 1, 2, 3, 4, 6, 7, 8, 9, 10}
 
 	suite.NoError(suite.fifo.MoveFrontWithId(top))
 	suite.Equal(result, suite.fifo.slice)
 }
 
+func (suite *FIFOTestSuite) TestMoveFrontOutOfBounds() {
+	const (
+		size = 10
+		top  = 10
+	)
+
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i + 1)
+	}
+
+	suite.EqualError(suite.fifo.MoveFrontWithId(top), "Index is out of bounds")
+}
+
+func (suite *FIFOTestSuite) TestMoveFrontAlreadyInFront() {
+	const (
+		size = 10
+		top  = 0
+	)
+
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i + 1)
+	}
+
+	suite.EqualError(suite.fifo.MoveFrontWithId(top), "Element already is in first position")
+}
+
+// ***************************************************************************************
+// ** Move elements to the back
+// ***************************************************************************************
 func (suite *FIFOTestSuite) TestMoveBack() {
 	const (
 		size = 10
 		back = 4
 	)
 
-	for i := 1; i < size; i++ {
-		suite.fifo.Enqueue(i)
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i + 1)
 	}
 
-	result := []interface{}{1, 2, 3, 4, 6, 7, 8, 9, 5}
+	result := []interface{}{1, 2, 3, 4, 6, 7, 8, 9, 10, 5}
 
 	suite.NoError(suite.fifo.MoveBackWithId(back))
 	suite.Equal(result, suite.fifo.slice)
+}
+
+func (suite *FIFOTestSuite) TestMoveBackOutOfBounds() {
+	const (
+		size = 10
+		back = 10
+	)
+
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i + 1)
+	}
+
+	suite.EqualError(suite.fifo.MoveBackWithId(back), "Index is out of bounds")
+	suite.Error(suite.fifo.MoveBackWithId(back))
+}
+
+func (suite *FIFOTestSuite) TestMoveBackAlreadyInBack() {
+	const (
+		size = 10
+		back = 9
+	)
+
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i + 1)
+	}
+
+	suite.EqualError(suite.fifo.MoveBackWithId(back), "Element already is in last position")
 }
 
 // ***************************************************************************************
