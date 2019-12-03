@@ -185,6 +185,7 @@ func (st *FIFO) GetAll() (interface{}, error) {
 	if st.isLocked {
 		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
+
 	st.rwmutex.RLock()
 	defer st.rwmutex.RUnlock()
 

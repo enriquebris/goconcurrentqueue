@@ -687,7 +687,7 @@ func (suite *FIFOTestSuite) TestGetAll() {
 	const (
 		size = 10
 	)
-	var slice []int
+	var slice []interface{}
 	for i := 0; i < size; i++ {
 		suite.fifo.Enqueue(i)
 		slice = append(slice, i)
