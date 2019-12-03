@@ -180,6 +180,16 @@ func (st *FIFO) Remove(index int) error {
 	return nil
 }
 
+func (st *FIFO) GetAll() (interface{}, error) {
+	if st.isLocked {
+		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+	st.rwmutex.RLock()
+	defer st.rwmutex.RUnlock()
+
+	return st.slice, nil
+}
+
 // GetLen returns the number of enqueued elements
 func (st *FIFO) GetLen() int {
 	st.rwmutex.RLock()
