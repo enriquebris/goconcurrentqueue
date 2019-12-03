@@ -180,6 +180,7 @@ func (st *FIFO) Remove(index int) error {
 	return nil
 }
 
+// GetAll returns the entire list of elements from the queue
 func (st *FIFO) GetAll() (interface{}, error) {
 	if st.isLocked {
 		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
