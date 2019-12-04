@@ -692,9 +692,72 @@ func (suite *FIFOTestSuite) TestGetAll() {
 		suite.fifo.Enqueue(i)
 		slice = append(slice, i)
 	}
-	result, err := suite.fifo.GetAll()
+	result, err := suite.fifo.GetAll(nil, nil)
 	suite.NoError(err)
 	suite.Equal(slice, result)
+}
+
+func (suite *FIFOTestSuite) TestGetAllFiltered() {
+	const (
+		size = 10
+
+	)
+	var (
+		limit = 2
+		offset = 4
+	)
+	var slice []interface{}
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i)
+		slice = append(slice, i)
+	}
+
+	expected := []interface{}{5, 6}
+
+	result, err := suite.fifo.GetAll(&limit, &offset)
+	suite.NoError(err)
+	suite.Equal(slice, suite.fifo.slice)
+	suite.Equal(expected, result)
+}
+
+func (suite *FIFOTestSuite) TestGetAllFilteredOutOfBounds() {
+	const (
+		size = 10
+
+	)
+	var (
+		limit = 2
+		offset = 10
+	)
+	var slice []interface{}
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i)
+		slice = append(slice, i)
+	}
+
+	_, err := suite.fifo.GetAll(&limit, &offset)
+	suite.EqualError(err, "Offset index out of bounds")
+	suite.Equal(slice, suite.fifo.slice)
+}
+
+func (suite *FIFOTestSuite) TestGetAllFilteredWrongRange() {
+	const (
+		size = 10
+
+	)
+	var (
+		limit = -5
+		offset = -3
+	)
+	var slice []interface{}
+	for i := 0; i < size; i++ {
+		suite.fifo.Enqueue(i)
+		slice = append(slice, i)
+	}
+
+	_, err := suite.fifo.GetAll(&limit, &offset)
+	suite.EqualError(err, "Offset index out of bounds")
+	suite.Equal(slice, suite.fifo.slice)
 }
 
 // ***************************************************************************************

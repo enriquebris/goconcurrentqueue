@@ -181,15 +181,32 @@ func (st *FIFO) Remove(index int) error {
 }
 
 // GetAll returns the entire list of elements from the queue
-func (st *FIFO) GetAll() (interface{}, error) {
+// If limit (n) and offset (m) are different than nil, it will return an slice
+// with the last n elements starting from position m
+func (st *FIFO) GetAll(limit, offset *int) (interface{}, error) {
 	if st.isLocked {
 		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
 
-	st.rwmutex.RLock()
-	defer st.rwmutex.RUnlock()
+	st.rwmutex.Lock()
+	defer st.rwmutex.Unlock()
 
-	return st.slice, nil
+	if limit == nil && offset == nil {
+		return st.slice, nil
+	}
+
+	if *offset >= len(st.slice) || *offset < 0 || *limit < 0 {
+		return nil, NewQueueError(QueueErrorCodeIndexOutOfBounds, "Offset index out of bounds")
+	}
+
+	if (*offset + *limit) >= len(st.slice) {
+		*limit = len(st.slice) - 1 - *offset
+	}
+	low := *offset + 1
+	high := *offset + *limit + 1
+	limited := st.slice[low:high]
+
+	return limited, nil
 }
 
 // GetLen returns the number of enqueued elements
