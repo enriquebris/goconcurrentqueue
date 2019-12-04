@@ -7,6 +7,8 @@ const (
 	QueueErrorCodeFullCapacity          = "full-capacity"
 	QueueErrorCodeInternalChannelClosed = "internal-channel-closed"
 	QueueErrorCodeIndexesMatch          = "indexes-match"
+	QueueErrorCodeIndexFirstPosition    = "index-first-position"
+	QueueErrorCodeIndexLastPosition     = "index-last-position"
 )
 
 type QueueError struct {
