@@ -6,6 +6,7 @@ const (
 	QueueErrorCodeIndexOutOfBounds      = "index-out-of-bounds"
 	QueueErrorCodeFullCapacity          = "full-capacity"
 	QueueErrorCodeInternalChannelClosed = "internal-channel-closed"
+	QueueErrorCodeIndexesMatch          = "indexes-match"
 )
 
 type QueueError struct {
