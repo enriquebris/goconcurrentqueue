@@ -275,3 +275,67 @@ func (st *FIFO) Swap(a int, b int) *QueueError {
 
 	return nil
 }
+
+// MoveFrontWithId moves the element at index position to the front of the queue
+func (st *FIFO) MoveFrontWithId(index int) error {
+
+	if st.isLocked {
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+	st.rwmutex.Lock()
+	defer st.rwmutex.Unlock()
+
+	length := len(st.slice)
+	if length == 0 {
+		return NewQueueError(QueueErrorCodeEmptyQueue, "Empty queue")
+	}
+
+	if index == 0 {
+		return NewQueueError(QueueErrorCodeIndexFirstPosition, "Element already is in first position")
+	}
+
+	if index >= length {
+		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index is out of bounds")
+	}
+
+	// Moves the element all the way to the back of the queue.
+	// The element is moved one position at a time using bubble sort algorithm.
+	for i := index; i >= 1; i-- {
+		st.slice[i], st.slice[i-1] = st.slice[i-1], st.slice[i]
+	}
+
+	return nil
+}
+
+// MoveBackWithId moves the element at index position to the back of the queue
+func (st *FIFO) MoveBackWithId(index int) error {
+
+	if st.isLocked {
+		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+	st.rwmutex.Lock()
+	defer st.rwmutex.Unlock()
+
+	length := len(st.slice)
+	if length == 0 {
+		return NewQueueError(QueueErrorCodeEmptyQueue, "Empty queue")
+	}
+
+	if index == length-1 {
+		return NewQueueError(QueueErrorCodeIndexLastPosition, "Element already is in last position")
+	}
+
+	if index >= length {
+		return NewQueueError(QueueErrorCodeIndexOutOfBounds, "Index is out of bounds")
+	}
+
+	// Moves the element all the way to the front of the queue.
+	// The element is moved one position at a time using bubble sort algorithm.
+	for i := index; i < length-1; i++ {
+		st.slice[i], st.slice[i+1] = st.slice[i+1], st.slice[i]
+	}
+
+	return nil
+}
+
+
