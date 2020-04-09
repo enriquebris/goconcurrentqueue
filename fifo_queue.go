@@ -1,6 +1,7 @@
 package goconcurrentqueue
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"time"
@@ -90,6 +91,13 @@ func (st *FIFO) Dequeue() (interface{}, error) {
 // DequeueOrWaitForNextElement dequeues an element (if exist) or waits until the next element gets enqueued and returns it.
 // Multiple calls to DequeueOrWaitForNextElement() would enqueue multiple "listeners" for future enqueued elements.
 func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
+	return st.DequeueOrWaitForNextElementContext(context.Background())
+}
+
+// DequeueOrWaitForNextElementContext dequeues an element (if exist) or waits until the next element gets enqueued and returns it.
+// Multiple calls to DequeueOrWaitForNextElementContext() would enqueue multiple "listeners" for future enqueued elements.
+// When the passed context expires this function exits and returns the context' error
+func (st *FIFO) DequeueOrWaitForNextElementContext(ctx context.Context) (interface{}, error) {
 	for {
 		if st.isLocked {
 			return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
@@ -109,10 +117,12 @@ func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
 			case st.waitForNextElementChan <- waitChan:
 
 				// re-checks every i milliseconds (top: 10 times) ... the following verifies if an item was enqueued
-				// around the same time DequeueOrWaitForNextElement was invoked, meaning the waitChan wasn't yet sent over
+				// around the same time DequeueOrWaitForNextElementContext was invoked, meaning the waitChan wasn't yet sent over
 				// st.waitForNextElementChan
 				for i := 0; i < dequeueOrWaitForNextElementInvokeGapTime; i++ {
 					select {
+					case <-ctx.Done():
+						return nil, ctx.Err()
 					case dequeuedItem := <-waitChan:
 						return dequeuedItem, nil
 					case <-time.After(time.Millisecond * time.Duration(i)):
@@ -123,7 +133,12 @@ func (st *FIFO) DequeueOrWaitForNextElement() (interface{}, error) {
 				}
 
 				// return the next enqueued element, if any
-				return <-waitChan, nil
+				select {
+					case item := <-waitChan:
+						return item, nil
+					case <-ctx.Done():
+						return nil, ctx.Err()
+				}
 			default:
 				// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
 				return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue and can't wait for next element because there are too many DequeueOrWaitForNextElement() waiting")

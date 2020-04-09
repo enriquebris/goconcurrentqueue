@@ -1,5 +1,7 @@
 package goconcurrentqueue
 
+import "context"
+
 // Fixed capacity FIFO (First In First Out) concurrent queue
 type FixedFIFO struct {
 	queue    chan interface{}
@@ -65,6 +67,13 @@ func (st *FixedFIFO) Dequeue() (interface{}, error) {
 // DequeueOrWaitForNextElement dequeues an element (if exist) or waits until the next element gets enqueued and returns it.
 // Multiple calls to DequeueOrWaitForNextElement() would enqueue multiple "listeners" for future enqueued elements.
 func (st *FixedFIFO) DequeueOrWaitForNextElement() (interface{}, error) {
+	return st.DequeueOrWaitForNextElementContext(context.Background())
+}
+
+// DequeueOrWaitForNextElementContext dequeues an element (if exist) or waits until the next element gets enqueued and returns it.
+// Multiple calls to DequeueOrWaitForNextElementContext() would enqueue multiple "listeners" for future enqueued elements.
+// When the passed context expires this function exits and returns the context' error
+func (st *FixedFIFO) DequeueOrWaitForNextElementContext(ctx context.Context) (interface{}, error) {
 	if st.IsLocked() {
 		return nil, NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
 	}
@@ -75,7 +84,8 @@ func (st *FixedFIFO) DequeueOrWaitForNextElement() (interface{}, error) {
 			return value, nil
 		}
 		return nil, NewQueueError(QueueErrorCodeInternalChannelClosed, "internal channel is closed")
-
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	// queue is empty, add a listener to wait until next enqueued element is ready
 	default:
 		// channel to wait for next enqueued element
@@ -85,7 +95,12 @@ func (st *FixedFIFO) DequeueOrWaitForNextElement() (interface{}, error) {
 		// enqueue a watcher into the watchForNextElementChannel to wait for the next element
 		case st.waitForNextElementChan <- waitChan:
 			// return the next enqueued element, if any
-			return <-waitChan, nil
+			select {
+			case item := <-waitChan:
+				return item, nil
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
 		default:
 			// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
 			return nil, NewQueueError(QueueErrorCodeEmptyQueue, "empty queue and can't wait for next element")
