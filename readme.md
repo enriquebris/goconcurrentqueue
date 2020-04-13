@@ -28,6 +28,8 @@ This package is compatible with the following golang versions:
  - 1.10.x
  - 1.11.x
  - 1.12.x
+ - 1.13.x
+ - 1.14.x
 
 ## Documentation
 Visit [goconcurrentqueue at godoc.org](https://godoc.org/github.com/enriquebris/goconcurrentqueue)
