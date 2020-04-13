@@ -158,6 +158,38 @@ func main() {
 
 ```
 
+### Wait until an element gets enqueued with timeout
+[Live code - playground](https://play.golang.org/p/E3xdHcW5nJy)
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/enriquebris/goconcurrentqueue"
+)
+
+func main() {
+	var (
+		fifo = goconcurrentqueue.NewFIFO()
+		ctx, cancel = context.WithTimeout(context.Background(), 3*time.Second)
+	)
+	defer cancel()
+
+	fmt.Println("1 - Waiting for next enqueued element")
+	_, err := fifo.DequeueOrWaitForNextElementContext(ctx)
+    
+	if err != nil {
+		fmt.Printf("2 - Failed waiting for new element: %v\n", err)
+		return
+	}
+}
+
+```
+
 ### Dependency Inversion Principle using concurrent-safe queues
 
 *High level modules should not depend on low level modules. Both should depend on abstractions.* Robert C. Martin

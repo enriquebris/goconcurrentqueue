@@ -1,6 +1,7 @@
 package goconcurrentqueue
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -476,4 +477,64 @@ func (suite *FixedFIFOTestSuite) TestUnlockSingleGR() {
 
 	suite.fifo.Unlock()
 	suite.True(suite.fifo.IsLocked() == false, "fifo.isLocked has to be false after fifo.Unlock()")
+}
+
+// ***************************************************************************************
+// ** Context
+// ***************************************************************************************
+
+// context canceled while waiting for element to be added
+func (suite *FixedFIFOTestSuite) TestContextCanceledAfter1Second() {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	var (
+		result interface{}
+		err    error
+		done   = make(chan struct{})
+	)
+
+	go func() {
+		result, err = suite.fifo.DequeueOrWaitForNextElementContext(ctx)
+		done <- struct{}{}
+	}()
+
+	select {
+	// wait for the dequeue to finish
+	case <-done:
+		suite.True(err == context.DeadlineExceeded, "Canceling the context passed to fifo.DequeueOrWaitForNextElementContext() must cancel the dequeue wait", err)
+		suite.Nil(result)
+
+	// the following comes first if more time than expected happened while waiting for the dequeued element
+	case <-time.After(2 * time.Second):
+		suite.Fail("DequeueOrWaitForNextElementContext did not return immediately after context was canceled")
+	}
+}
+
+// passing a already-canceled context to DequeueOrWaitForNextElementContext
+func (suite *FixedFIFOTestSuite) TestContextAlreadyCanceled() {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	var (
+		result interface{}
+		err    error
+		done   = make(chan struct{})
+	)
+
+	go func() {
+		result, err = suite.fifo.DequeueOrWaitForNextElementContext(ctx)
+		done <- struct{}{}
+	}()
+
+	select {
+	// wait for the dequeue to finish
+	case <-done:
+		suite.True(err == context.Canceled, "Canceling the context passed to fifo.DequeueOrWaitForNextElementContext() must cancel the dequeue wait", err)
+		suite.Nil(result)
+
+	// the following comes first if more time than expected happened while waiting for the dequeued element
+	case <-time.After(2 * time.Second):
+		suite.Fail("DequeueOrWaitForNextElementContext did not return immediately after context was canceled")
+	}
 }
