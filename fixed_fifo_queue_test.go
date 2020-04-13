@@ -327,11 +327,18 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementWithEmptyQueue()
 		done   = make(chan struct{})
 	)
 
+	wait4gr := make(chan struct{})
 	// waiting for next enqueued element
-	go func() {
+	go func(ready chan struct{}) {
+		// let flow know this goroutine is ready
+		wait4gr <- struct{}{}
+
 		result, err = suite.fifo.DequeueOrWaitForNextElement()
 		done <- struct{}{}
-	}()
+	}(wait4gr)
+
+	// wait until listener goroutine is ready to dequeue/wait
+	<-wait4gr
 
 	// enqueue an element
 	go func() {
@@ -344,7 +351,7 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementWithEmptyQueue()
 		suite.NoError(err)
 		suite.Equal(value, result)
 
-	// the following comes first if more time than expected happened while waiting for the dequeued element
+	// the following comes first if more time than expected passed while waiting for the dequeued element
 	case <-time.After(2 * time.Second):
 		suite.Fail("too much time waiting for the enqueued element")
 
