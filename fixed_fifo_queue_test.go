@@ -371,7 +371,9 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementWithFullWaitingC
 // multiple GRs, calling DequeueOrWaitForNextElement from different GRs and enqueuing the expected values later
 func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 	var (
-		wg sync.WaitGroup
+		wg,
+		// waitgroup to wait until goroutines are running
+		wg4grs sync.WaitGroup
 		// channel to enqueue dequeued values
 		dequeuedValues = make(chan int, WaitForNextElementChanCapacity)
 		// map[dequeued_value] = times dequeued
@@ -379,7 +381,9 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 	)
 
 	for i := 0; i < WaitForNextElementChanCapacity; i++ {
+		wg4grs.Add(1)
 		go func() {
+			wg4grs.Done()
 			// wait for the next enqueued element
 			result, err := suite.fifo.DequeueOrWaitForNextElement()
 			// no error && no nil result
@@ -394,6 +398,9 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 			wg.Done()
 		}()
 	}
+
+	// wait here until all goroutines (from above) are up and running
+	wg4grs.Wait()
 
 	// enqueue all needed elements
 	for i := 0; i < WaitForNextElementChanCapacity; i++ {
@@ -415,7 +422,7 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementMultiGR() {
 		// increment the m[p] value meaning the value p was dequeued
 		mp[v] = val + 1
 	}
-	// verify that there are no duplicates
+	// verify there are no duplicates
 	for k, v := range mp {
 		suite.Equalf(1, v, "%v was dequeued %v times", k, v)
 	}
