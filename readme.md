@@ -7,7 +7,7 @@ It comes with multiple Queue's concurrent-safe implementations, meaning they cou
 ## Topics
  - [Installation](#installation)
  - [Documentation](#documentation)
- - [Class diagram](#class-diagram)
+ - [Classes diagram](#classes-diagram)
  - [Queues](#queues)
     - [FIFO](#fifo)
     - [FixedFIFO](#fixedfifo)
@@ -35,7 +35,7 @@ This package is compatible with the following golang versions:
 ## Documentation
 Visit [goconcurrentqueue at go.dev](https://pkg.go.dev/mod/github.com/enriquebris/goconcurrentqueue)
 
-## Class diagram
+## Classes diagram
 ![goconcurrentqueue class diagram](web/class-diagram.svg "goconcurrentqueue class diagram")
 
 ## Queues
