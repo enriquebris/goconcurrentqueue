@@ -82,10 +82,17 @@ func (suite *FixedFIFOTestSuite) TestEnqueueListenerToExpireSingleGR() {
 	var (
 		uselessChan = make(chan interface{})
 		value = "my-test-value"
+		ready = false
 	)
 
-	// let Enqueue knows there is a channel to send the next item instead of enqueueing it into the queue
-	suite.fifo.waitForNextElementChan <- uselessChan
+	for !ready {
+		// let Enqueue knows there is a channel to send the next item instead of enqueueing it into the queue
+		select {
+		case suite.fifo.waitForNextElementChan <- uselessChan:
+			ready = true
+		default:
+		}
+	}
 
 	// enqueues an item having an waiting channel but without a valid listener, so the item should be enqueued into the queue
 	suite.fifo.Enqueue(value)
