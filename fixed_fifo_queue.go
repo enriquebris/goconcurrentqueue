@@ -32,16 +32,30 @@ func (st *FixedFIFO) Enqueue(value interface{}) error {
 	// check if there is a listener waiting for the next element (this element)
 	select {
 	case listener := <-st.waitForNextElementChan:
-		// send the element through the listener's channel instead of enqueue it
-		listener <- value
+		// verify whether it is possible to notify the listener (it could be the listener is no longer
+		// available because the context expired: DequeueOrWaitForNextElementContext)
+		select {
+			// sends the element through the listener's channel instead of enqueueing it
+			case listener <- value:
+			default:
+				// push the element into the queue instead of sending it through the listener's channel (which is not available at this moment)
+				return st.enqueueIntoQueue(value)
+		}
 
 	default:
-		// enqueue the element following the "normal way"
-		select {
-		case st.queue <- value:
-		default:
-			return NewQueueError(QueueErrorCodeFullCapacity, "FixedFIFO queue is at full capacity")
-		}
+		// enqueue the element into the queue
+		return st.enqueueIntoQueue(value)
+	}
+
+	return nil
+}
+
+// enqueueIntoQueue enqueues the given item directly into the regular queue
+func (st *FixedFIFO) enqueueIntoQueue(value interface{}) error {
+	select {
+	case st.queue <- value:
+	default:
+		return NewQueueError(QueueErrorCodeFullCapacity, "FixedFIFO queue is at full capacity")
 	}
 
 	return nil

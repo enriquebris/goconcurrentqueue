@@ -78,6 +78,23 @@ func (suite *FixedFIFOTestSuite) TestEnqueueFullCapacitySingleGR() {
 	suite.Equalf(QueueErrorCodeFullCapacity, customError.Code(), "Expected code: '%v'", QueueErrorCodeFullCapacity)
 }
 
+func (suite *FixedFIFOTestSuite) TestEnqueueListenerToExpireSingleGR() {
+	var (
+		uselessChan = make(chan interface{})
+		value = "my-test-value"
+	)
+
+	// let Enqueue knows there is a channel to send the next item instead of enqueueing it into the queue
+	suite.fifo.waitForNextElementChan <- uselessChan
+
+	// enqueues an item having an waiting channel but without a valid listener, so the item should be enqueued into the queue
+	suite.fifo.Enqueue(value)
+	// dequeues the item directly from the queue
+	dequeuedValue, _ := suite.fifo.Dequeue()
+
+	suite.Equal(value, dequeuedValue)
+}
+
 // TestEnqueueLenMultipleGR enqueues elements concurrently
 //
 // Detailed steps:
