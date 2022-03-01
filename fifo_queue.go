@@ -20,6 +20,8 @@ type FIFO struct {
 	isLocked    bool
 	// queue for watchers that will wait for next elements (if queue is empty at DequeueOrWaitForNextElement execution )
 	waitForNextElementChan chan chan interface{}
+	// queue to unlock consumers that were locked when queue was empty (during DequeueOrWaitForNextElement execution)
+	unlockDequeueOrWaitForNextElementChan chan struct{}
 }
 
 // NewFIFO returns a new FIFO concurrent queue
@@ -33,12 +35,20 @@ func NewFIFO() *FIFO {
 func (st *FIFO) initialize() {
 	st.slice = make([]interface{}, 0)
 	st.waitForNextElementChan = make(chan chan interface{}, WaitForNextElementChanCapacity)
+	st.unlockDequeueOrWaitForNextElementChan = make(chan struct{}, WaitForNextElementChanCapacity)
 }
 
 // Enqueue enqueues an element. Returns error if queue is locked.
 func (st *FIFO) Enqueue(value interface{}) error {
 	if st.isLocked {
 		return NewQueueError(QueueErrorCodeLockedQueue, "The queue is locked")
+	}
+
+	// let consumers (DequeueOrWaitForNextElement) know there is a new element
+	select {
+	case st.unlockDequeueOrWaitForNextElementChan <- struct{}{}:
+	default:
+		// message could not be sent
 	}
 
 	// check if there is a listener waiting for the next element (this element)
@@ -134,10 +144,14 @@ func (st *FIFO) DequeueOrWaitForNextElementContext(ctx context.Context) (interfa
 
 				// return the next enqueued element, if any
 				select {
-					case item := <-waitChan:
-						return item, nil
-					case <-ctx.Done():
-						return nil, ctx.Err()
+				case <-st.unlockDequeueOrWaitForNextElementChan:
+					// new enqueued element, no need to keep waiting
+					break
+
+				case item := <-waitChan:
+					return item, nil
+				case <-ctx.Done():
+					return nil, ctx.Err()
 				}
 			default:
 				// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
