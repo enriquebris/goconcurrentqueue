@@ -126,32 +126,43 @@ func (st *FIFO) DequeueOrWaitForNextElementContext(ctx context.Context) (interfa
 			// enqueue a watcher into the watchForNextElementChannel to wait for the next element
 			case st.waitForNextElementChan <- waitChan:
 
-				// re-checks every i milliseconds (top: 10 times) ... the following verifies if an item was enqueued
-				// around the same time DequeueOrWaitForNextElementContext was invoked, meaning the waitChan wasn't yet sent over
-				// st.waitForNextElementChan
-				for i := 0; i < dequeueOrWaitForNextElementInvokeGapTime; i++ {
-					select {
-					case <-ctx.Done():
-						return nil, ctx.Err()
-					case dequeuedItem := <-waitChan:
-						return dequeuedItem, nil
-					case <-time.After(time.Millisecond * time.Duration(i)):
-						if dequeuedItem, err := st.Dequeue(); err == nil {
+				// n
+				for {
+					// re-checks every i milliseconds (top: 10 times) ... the following verifies if an item was enqueued
+					// around the same time DequeueOrWaitForNextElementContext was invoked, meaning the waitChan wasn't yet sent over
+					// st.waitForNextElementChan
+					for i := 0; i < dequeueOrWaitForNextElementInvokeGapTime; i++ {
+						select {
+						case <-ctx.Done():
+							return nil, ctx.Err()
+						case dequeuedItem := <-waitChan:
 							return dequeuedItem, nil
+						case <-time.After(time.Millisecond * time.Duration(i)):
+							if dequeuedItem, err := st.Dequeue(); err == nil {
+								return dequeuedItem, nil
+							}
 						}
 					}
-				}
 
-				// return the next enqueued element, if any
-				select {
-				case <-st.unlockDequeueOrWaitForNextElementChan:
+					// return the next enqueued element, if any
+					select {
 					// new enqueued element, no need to keep waiting
-					break
+					case <-st.unlockDequeueOrWaitForNextElementChan:
+						// check if we got a new element just after we got <-st.unlockDequeueOrWaitForNextElementChan
+						select {
+						case item := <-waitChan:
+							return item, nil
+						default:
+						}
+						// go back to: for loop
+						continue
 
-				case item := <-waitChan:
-					return item, nil
-				case <-ctx.Done():
-					return nil, ctx.Err()
+					case item := <-waitChan:
+						return item, nil
+					case <-ctx.Done():
+						return nil, ctx.Err()
+					}
+					// n
 				}
 			default:
 				// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
