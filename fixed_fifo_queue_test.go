@@ -81,7 +81,7 @@ func (suite *FixedFIFOTestSuite) TestEnqueueFullCapacitySingleGR() {
 func (suite *FixedFIFOTestSuite) TestEnqueueListenerToExpireSingleGR() {
 	var (
 		uselessChan = make(chan interface{})
-		value = "my-test-value"
+		value       = "my-test-value"
 	)
 
 	// let Enqueue knows there is a channel to send the next item instead of enqueueing it into the queue
@@ -98,6 +98,7 @@ func (suite *FixedFIFOTestSuite) TestEnqueueListenerToExpireSingleGR() {
 // TestEnqueueLenMultipleGR enqueues elements concurrently
 //
 // Detailed steps:
+//
 //	1 - Enqueue totalGRs concurrently (from totalGRs different GRs)
 //	2 - Verifies the len, it should be equal to totalGRs
 //	3 - Verifies that all elements from 0 to totalGRs were enqueued
@@ -269,6 +270,7 @@ func (suite *FixedFIFOTestSuite) TestDequeueClosedChannelSingleGR() {
 // TestDequeueMultipleGRs dequeues elements concurrently
 //
 // Detailed steps:
+//
 //	1 - Enqueues totalElementsToEnqueue consecutive integers
 //	2 - Dequeues totalElementsToDequeue concurrently from totalElementsToDequeue GRs
 //	3 - Verifies the final len, should be equal to totalElementsToEnqueue - totalElementsToDequeue
@@ -373,6 +375,39 @@ func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementWithEmptyQueue()
 	case <-time.After(2 * time.Second):
 		suite.Fail("too much time waiting for the enqueued element")
 
+	}
+}
+
+// calling DequeueOrWaitForNextElement with empty queue, then adding an item directly into queue's internal channel
+func (suite *FixedFIFOTestSuite) TestDequeueOrWaitForNextElementWithStuckWaitChan() {
+	var (
+		dummyValue = "dummyValue"
+		doneChan   = make(chan struct{})
+	)
+
+	// consumer
+	go func(queue *FixedFIFO, expectedValue interface{}, done chan struct{}) {
+		item, err := queue.DequeueOrWaitForNextElement()
+		suite.NoError(err)
+		suite.Equal(expectedValue, item)
+
+		done <- struct{}{}
+	}(suite.fifo, dummyValue, doneChan)
+
+	// a second should be enough for the consumer to start consuming ...
+	time.Sleep(time.Second)
+
+	// add an item (enqueue) directly into queue's internal channel
+	suite.fifo.queue <- dummyValue
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	select {
+	case <-doneChan:
+
+	case <-ctx.Done():
+		suite.Fail("too much time waiting ...")
 	}
 }
 

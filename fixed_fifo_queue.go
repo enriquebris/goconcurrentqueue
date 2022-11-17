@@ -1,6 +1,8 @@
 package goconcurrentqueue
 
-import "context"
+import (
+	"context"
+)
 
 // Fixed capacity FIFO (First In First Out) concurrent queue
 type FixedFIFO struct {
@@ -35,11 +37,11 @@ func (st *FixedFIFO) Enqueue(value interface{}) error {
 		// verify whether it is possible to notify the listener (it could be the listener is no longer
 		// available because the context expired: DequeueOrWaitForNextElementContext)
 		select {
-			// sends the element through the listener's channel instead of enqueueing it
-			case listener <- value:
-			default:
-				// push the element into the queue instead of sending it through the listener's channel (which is not available at this moment)
-				return st.enqueueIntoQueue(value)
+		// sends the element through the listener's channel instead of enqueueing it
+		case listener <- value:
+		default:
+			// push the element into the queue instead of sending it through the listener's channel (which is not available at this moment)
+			return st.enqueueIntoQueue(value)
 		}
 
 	default:
@@ -114,6 +116,12 @@ func (st *FixedFIFO) DequeueOrWaitForNextElementContext(ctx context.Context) (in
 				return item, nil
 			case <-ctx.Done():
 				return nil, ctx.Err()
+			// try again to get the element from the regular queue (in case waitChan doesn't provide any item)
+			case value, ok := <-st.queue:
+				if ok {
+					return value, nil
+				}
+				return nil, NewQueueError(QueueErrorCodeInternalChannelClosed, "internal channel is closed")
 			}
 		default:
 			// too many watchers (waitForNextElementChanCapacity) enqueued waiting for next elements
